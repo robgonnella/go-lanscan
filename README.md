@@ -7,31 +7,33 @@ scanning on a local area network.
 
 First install [golang], then run the following command.
 
+```bash
 go install github.com/robgonnella/go-lanscan@latest
+```
 
 ## Cli Usage
 
 ```bash
 # print usage info for this cli
-lanscan --help
+go-lanscan --help
 
 # scan all ports on current LAN
-lanscan
+go-lanscan
 
 # scan specific ports
-lanscan --ports 22,111,3000-9000
+go-lanscan --ports 22,111,3000-9000
 
 # scan specific targets
-lanscan --targets 192.22.22.1,192.56.42.1/24
+go-lanscan --targets 192.22.22.1,192.56.42.1/24
 
 # choose specific interface when scanning
-lanscan --interface en0
+go-lanscan --interface en0
 
 # only output final result as table text
-lanscan --no-progress
+go-lanscan --no-progress
 
 # only output final result in json
-lanscan --no-progress --json
+go-lanscan --no-progress --json
 ```
 
 ## Package Usage
