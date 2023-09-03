@@ -336,10 +336,12 @@ func (runner *rootRunner) processArpDone() {
 		runner.arpTracker.Increment(10)
 		runner.printArpResults()
 
-		runner.synTracker.Total = int64(
-			len(runner.results.Devices) * util.PortTotal(runner.ports),
-		)
-		runner.pw.AppendTracker(runner.synTracker)
+		if len(runner.results.Devices) > 0 {
+			runner.synTracker.Total = int64(
+				len(runner.results.Devices) * util.PortTotal(runner.ports),
+			)
+			runner.pw.AppendTracker(runner.synTracker)
+		}
 	}
 
 	synTargets := []*scanner.ArpScanResult{}
