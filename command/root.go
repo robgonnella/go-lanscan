@@ -335,6 +335,7 @@ func (runner *rootRunner) processArpDone() {
 		runner.arpTracker.Message = "arp - scan complete"
 		runner.arpTracker.Increment(10)
 		runner.printArpResults()
+
 		runner.synTracker.Total = int64(
 			len(runner.results.Devices) * util.PortTotal(runner.ports),
 		)
@@ -371,6 +372,14 @@ func (runner *rootRunner) processArpDone() {
 	}
 
 	runner.synScanner = synScanner
+
+	if len(runner.results.Devices) == 0 {
+		go func() {
+			runner.synDone <- true
+		}()
+
+		return
+	}
 
 	// run in goroutine so we can process results in parallel
 	if err := synScanner.Scan(); err != nil {

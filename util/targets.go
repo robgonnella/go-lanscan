@@ -67,6 +67,19 @@ func TotalTargets(targets []string) int {
 	return total
 }
 
+func TargetsHas(targets []string, t net.IP) bool {
+	has := false
+	LoopTargets(targets, func(v net.IP) error {
+		if v.Equal(t) {
+			has = true
+		}
+
+		return nil
+	})
+
+	return has
+}
+
 // LoopPorts helper to prevent storing entire list in memory
 func LoopPorts(ports []string, f func(p uint16) error) error {
 	for _, strPort := range ports {

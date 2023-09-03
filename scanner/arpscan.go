@@ -162,9 +162,16 @@ func (s *ArpScanner) handleARPLayer(arp *layers.ARP) {
 	ip := net.IP(arp.SourceProtAddress)
 	mac := net.HardwareAddr(arp.SourceHwAddress)
 
-	if !s.networkInfo.IPNet.Contains(ip) {
-		// not an arp response we care about
-		return
+	if len(s.targets) > 0 {
+		if !util.TargetsHas(s.targets, ip) {
+			// not an arp response we care about
+			return
+		}
+	} else {
+		if !s.networkInfo.IPNet.Contains(ip) {
+			// not an arp response we care about
+			return
+		}
 	}
 
 	s.mux.Lock()
