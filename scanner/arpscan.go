@@ -18,12 +18,13 @@ import (
 type ArpScanner struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
+	targets          []string
 	networkInfo      *network.NetworkInfo
 	inactiveHandle   *pcap.InactiveHandle
 	handle           *pcap.Handle
 	resultChan       chan *ArpScanResult
 	doneChan         chan bool
-	notificationCB   func(a *RequestAttempt)
+	notificationCB   func(a *Request)
 	requestsComplete bool
 	lastPacketTime   time.Time
 	idleTimeout      time.Duration
@@ -31,6 +32,7 @@ type ArpScanner struct {
 }
 
 func NewArpScanner(
+	targets []string,
 	networkInfo *network.NetworkInfo,
 	resultChan chan *ArpScanResult,
 	doneChan chan bool,
@@ -51,6 +53,7 @@ func NewArpScanner(
 	scanner := &ArpScanner{
 		ctx:              ctx,
 		cancel:           cancel,
+		targets:          targets,
 		networkInfo:      networkInfo,
 		inactiveHandle:   inactive,
 		resultChan:       resultChan,
@@ -79,7 +82,11 @@ func (s *ArpScanner) Scan() error {
 
 	go s.readPackets()
 
-	err = util.LoopNetIPHosts(s.networkInfo.IPNet, s.writePacketData)
+	if len(s.targets) == 0 {
+		err = util.LoopNetIPHosts(s.networkInfo.IPNet, s.writePacketData)
+	} else {
+		err = util.LoopTargets(s.targets, s.writePacketData)
+	}
 
 	s.requestsComplete = true
 
@@ -94,7 +101,7 @@ func (s *ArpScanner) Stop() {
 	}
 }
 
-func (s *ArpScanner) SetRequestNotifications(cb func(a *RequestAttempt)) {
+func (s *ArpScanner) SetRequestNotifications(cb func(a *Request)) {
 	s.notificationCB = cb
 }
 
@@ -105,6 +112,7 @@ func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 func (s *ArpScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
 	packetSource.NoCopy = true
+	start := time.Now()
 
 	for {
 		select {
@@ -122,6 +130,14 @@ func (s *ArpScanner) readPackets() {
 			s.mux.RUnlock()
 
 			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
+				s.Stop()
+				s.doneChan <- true
+				close(s.doneChan)
+				close(s.resultChan)
+				return
+			}
+
+			if s.requestsComplete && packetTime.IsZero() && time.Since(start) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
 				close(s.doneChan)
@@ -212,7 +228,7 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 	}
 
 	if s.notificationCB != nil {
-		go s.notificationCB(&RequestAttempt{IP: ip.String()})
+		go s.notificationCB(&Request{IP: ip.String()})
 	}
 
 	return nil

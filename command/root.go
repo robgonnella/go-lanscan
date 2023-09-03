@@ -64,6 +64,7 @@ func NewRoot() (*cobra.Command, error) {
 	var idleTimeoutSeconds int
 	var listenPort uint16
 	var ifaceName string
+	var targets []string
 
 	netInfo, err := network.GetNetworkInfo()
 
@@ -86,9 +87,12 @@ func NewRoot() (*cobra.Command, error) {
 				}
 			}
 
-			fmt.Printf("netInfo: %+v\n", netInfo)
+			if len(targets) == 1 && targets[0] == netInfo.Cidr {
+				targets = []string{}
+			}
 
 			runner, err := newRootRunner(
+				targets,
 				netInfo,
 				portList,
 				listenPort,
@@ -111,6 +115,7 @@ func NewRoot() (*cobra.Command, error) {
 	cmd.Flags().IntVar(&idleTimeoutSeconds, "idle-timeout", 5, "timeout when no expected packets are received for this duration")
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
 	cmd.Flags().StringVarP(&ifaceName, "interface", "i", netInfo.Interface.Name, "set the interface for scanning")
+	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{netInfo.Cidr}, "set targets for scanning")
 
 	return cmd, nil
 }
@@ -119,6 +124,8 @@ type rootRunner struct {
 	idleTimeoutSeconds int
 	printJson          bool
 	noProgress         bool
+	targets            []string
+	totalTargets       int
 	netInfo            *network.NetworkInfo
 	totalHosts         int
 	ports              []string
@@ -138,6 +145,7 @@ type rootRunner struct {
 }
 
 func newRootRunner(
+	targets []string,
 	netInfo *network.NetworkInfo,
 	ports []string,
 	listenPort uint16,
@@ -149,6 +157,7 @@ func newRootRunner(
 	arpDone := make(chan bool)
 
 	arpScanner, err := scanner.NewArpScanner(
+		targets,
 		netInfo,
 		arpResults,
 		arpDone,
@@ -167,6 +176,7 @@ func newRootRunner(
 	}
 
 	runner := &rootRunner{
+		targets:            targets,
 		netInfo:            netInfo,
 		ports:              ports,
 		listenPort:         listenPort,
@@ -175,6 +185,7 @@ func newRootRunner(
 		printJson:          printJson,
 		results:            results,
 		pw:                 pw,
+		totalTargets:       util.TotalTargets(targets),
 		totalHosts:         util.IPHostTotal(netInfo.IPNet),
 		arpTracker:         tracker(pw, "starting arp scan", true),
 		synTracker:         tracker(pw, "starting syn scan", false),
@@ -187,7 +198,11 @@ func newRootRunner(
 		log:                logger.New(),
 	}
 
-	runner.arpTracker.Total = int64(runner.totalHosts)
+	if runner.totalTargets > 0 {
+		runner.arpTracker.Total = int64(runner.totalTargets)
+	} else {
+		runner.arpTracker.Total = int64(runner.totalHosts)
+	}
 
 	if noProgress {
 		logger.SetGlobalLevel(zerolog.Disabled)
@@ -365,7 +380,7 @@ func (runner *rootRunner) processArpDone() {
 	}
 }
 
-func (runner *rootRunner) arpAttemptCallback(a *scanner.RequestAttempt) {
+func (runner *rootRunner) arpAttemptCallback(a *scanner.Request) {
 	message := fmt.Sprintf("arp - scanning %s", a.IP)
 	runner.arpTracker.Message = message
 	runner.arpTracker.Increment(1)
@@ -374,7 +389,7 @@ func (runner *rootRunner) arpAttemptCallback(a *scanner.RequestAttempt) {
 	}
 }
 
-func (runner *rootRunner) synAttemptCallback(a *scanner.RequestAttempt) {
+func (runner *rootRunner) synAttemptCallback(a *scanner.Request) {
 	message := fmt.Sprintf("syn - scanning port %d on %s", a.Port, a.IP)
 	runner.synTracker.Message = message
 	runner.synTracker.Increment(1)

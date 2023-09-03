@@ -25,7 +25,7 @@ type SynScanner struct {
 	handle           *pcap.Handle
 	resultChan       chan *SynScanResult
 	doneChan         chan bool
-	notificationCB   func(a *RequestAttempt)
+	notificationCB   func(a *Request)
 	lastPacketTime   time.Time
 	requestsComplete bool
 	idleTimeout      time.Duration
@@ -114,7 +114,7 @@ func (s *SynScanner) Stop() {
 	}
 }
 
-func (s *SynScanner) SetRequestNotifications(cb func(a *RequestAttempt)) {
+func (s *SynScanner) SetRequestNotifications(cb func(a *Request)) {
 	s.notificationCB = cb
 }
 
@@ -125,6 +125,7 @@ func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 func (s *SynScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
 	packetSource.NoCopy = true
+	start := time.Now()
 
 	for {
 		select {
@@ -138,6 +139,14 @@ func (s *SynScanner) readPackets() {
 			s.mux.RUnlock()
 
 			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
+				s.Stop()
+				s.doneChan <- true
+				close(s.doneChan)
+				close(s.resultChan)
+				return
+			}
+
+			if s.requestsComplete && packetTime.IsZero() && time.Since(start) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
 				close(s.doneChan)
@@ -260,7 +269,7 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 	}
 
 	if s.notificationCB != nil {
-		go s.notificationCB(&RequestAttempt{IP: target.IP.String(), Port: port})
+		go s.notificationCB(&Request{IP: target.IP.String(), Port: port})
 	}
 
 	return nil

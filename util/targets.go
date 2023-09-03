@@ -3,11 +3,14 @@ package util
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/robgonnella/go-lanscan/network"
 )
+
+var cidrSuffix = regexp.MustCompile(`\/\d{1,2}$`)
 
 // LoopNetIPHosts helper to prevent storing entire list in memory
 func LoopNetIPHosts(ipnet *net.IPNet, f func(ip net.IP) error) error {
@@ -26,6 +29,37 @@ func IPHostTotal(ipnet *net.IPNet) int {
 	total := 0
 
 	LoopNetIPHosts(ipnet, func(ip net.IP) error {
+		total++
+		return nil
+	})
+
+	return total
+}
+
+func LoopTargets(targets []string, f func(target net.IP) error) error {
+	for _, t := range targets {
+		if cidrSuffix.MatchString(t) {
+			_, ipnet, err := net.ParseCIDR(t)
+
+			if err != nil {
+				return err
+			}
+
+			return LoopNetIPHosts(ipnet, f)
+		} else {
+			if err := f(net.ParseIP(t)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func TotalTargets(targets []string) int {
+	total := 0
+
+	LoopTargets(targets, func(ip net.IP) error {
 		total++
 		return nil
 	})

@@ -4,7 +4,7 @@ import "time"
 
 type ScannerOption = func(s Scanner)
 
-func WithRequestNotifications(cb func(a *RequestAttempt)) ScannerOption {
+func WithRequestNotifications(cb func(a *Request)) ScannerOption {
 	return func(s Scanner) {
 		s.SetRequestNotifications(cb)
 	}

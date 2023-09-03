@@ -7,7 +7,7 @@ import (
 
 //go:generate mockgen -destination=../mock/scanner/scanner.go -package=mock_scanner . Scanner
 
-type RequestAttempt struct {
+type Request struct {
 	IP   string
 	Port uint16
 }
@@ -16,7 +16,7 @@ type RequestAttempt struct {
 type Scanner interface {
 	Scan() error
 	Stop()
-	SetRequestNotifications(cb func(a *RequestAttempt))
+	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
 }
 
