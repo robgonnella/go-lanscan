@@ -1,4 +1,4 @@
-// SYN Scanning example
+// Full (ARP + SYN) Scanning example
 package main
 
 import (
