@@ -18,22 +18,22 @@ go install github.com/robgonnella/go-lanscan@latest
 go-lanscan --help
 
 # scan all ports on current LAN
-go-lanscan
+sudo go-lanscan
 
 # scan specific ports
-go-lanscan --ports 22,111,3000-9000
+sudo go-lanscan --ports 22,111,3000-9000
 
 # scan specific targets
-go-lanscan --targets 192.22.22.1,192.56.42.1/24
+sudo go-lanscan --targets 192.22.22.1,192.56.42.1/24
 
 # choose specific interface when scanning
-go-lanscan --interface en0
+sudo go-lanscan --interface en0
 
 # only output final result as table text
-go-lanscan --no-progress
+sudo go-lanscan --no-progress
 
 # only output final result in json
-go-lanscan --no-progress --json
+sudo go-lanscan --no-progress --json
 ```
 
 ## Package Usage
