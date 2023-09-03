@@ -3,7 +3,9 @@
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.
 
-## Installation
+## Cli Usage
+
+### Installation
 
 First install [golang], then run the following command.
 
@@ -11,7 +13,7 @@ First install [golang], then run the following command.
 go install github.com/robgonnella/go-lanscan@latest
 ```
 
-## Cli Usage
+### Usage
 
 ```bash
 # print usage info for this cli
