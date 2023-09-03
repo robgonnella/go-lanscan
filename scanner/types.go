@@ -7,7 +7,15 @@ import (
 
 //go:generate mockgen -destination=../mock/scanner/scanner.go -package=mock_scanner . Scanner
 
+type RequestType string
+
+const (
+	ArpRequest RequestType = "ARP"
+	SynRequest RequestType = "SYN"
+)
+
 type Request struct {
+	Type RequestType
 	IP   string
 	Port uint16
 }

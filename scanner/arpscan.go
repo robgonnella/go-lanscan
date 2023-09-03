@@ -228,7 +228,7 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 	}
 
 	if s.notificationCB != nil {
-		go s.notificationCB(&Request{IP: ip.String()})
+		go s.notificationCB(&Request{Type: ArpRequest, IP: ip.String()})
 	}
 
 	return nil

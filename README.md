@@ -42,9 +42,10 @@ sudo go-lanscan --no-progress --json
 
 - [arp-scanner](./examples/arpscan.go)
 - [syn-scanner](./examples/synscan.go)
+- [full-scanner](./examples/fullscan.go)
 
-For both ArpScanner and SynScanner you can optionally receive a callback
-whenever a packet is sent to a target
+For all Scanners you can optionally receive a callback whenever a packet is sent
+to a target
 
 ```go
   callback := func(request *scanner.Request) {

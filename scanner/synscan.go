@@ -269,7 +269,11 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 	}
 
 	if s.notificationCB != nil {
-		go s.notificationCB(&Request{IP: target.IP.String(), Port: port})
+		go s.notificationCB(&Request{
+			Type: SynRequest,
+			IP:   target.IP.String(),
+			Port: port,
+		})
 	}
 
 	return nil
