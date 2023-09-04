@@ -3,7 +3,10 @@ package scanner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -28,6 +31,9 @@ type ArpScanner struct {
 	requestsComplete bool
 	lastPacketTime   time.Time
 	idleTimeout      time.Duration
+	semaphore        chan struct{}
+	vendorChan       chan *VendorResult
+	wg               *sync.WaitGroup
 	mux              sync.RWMutex
 }
 
@@ -61,6 +67,8 @@ func NewArpScanner(
 		lastPacketTime:   time.Time{},
 		idleTimeout:      time.Second * 5,
 		requestsComplete: false,
+		semaphore:        make(chan struct{}, 1),
+		wg:               &sync.WaitGroup{},
 		mux:              sync.RWMutex{},
 	}
 
@@ -130,6 +138,7 @@ func (s *ArpScanner) readPackets() {
 			s.mux.RUnlock()
 
 			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
+				s.wg.Wait() // wait for requests to finish
 				s.Stop()
 				s.doneChan <- true
 				close(s.doneChan)
@@ -178,12 +187,7 @@ func (s *ArpScanner) handleARPLayer(arp *layers.ARP) {
 	s.lastPacketTime = time.Now()
 	s.mux.Unlock()
 
-	go func(i net.IP, m net.HardwareAddr) {
-		s.resultChan <- &ArpScanResult{
-			MAC: m,
-			IP:  i,
-		}
-	}(ip, mac)
+	go s.processResult(ip, mac)
 }
 
 func (s *ArpScanner) writePacketData(ip net.IP) error {
@@ -239,4 +243,44 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 	}
 
 	return nil
+}
+
+func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
+	s.resultChan <- &ArpScanResult{
+		IP:  ip,
+		MAC: mac,
+	}
+
+	if s.vendorChan != nil {
+		s.wg.Add(1)
+
+		s.semaphore <- struct{}{} // acquire lock
+
+		wrapper := func() {
+			vendor := &Vendor{Company: "Unknown"}
+
+			url := fmt.Sprintf(
+				"https://api.maclookup.app/v2/macs/%s",
+				mac.String(),
+			)
+
+			response, _ := http.Get(url)
+
+			json.NewDecoder(response.Body).Decode(&vendor)
+
+			if vendor.Company == "" {
+				vendor.Company = "Unknown"
+			}
+
+			s.vendorChan <- &VendorResult{
+				MAC:    mac,
+				Vendor: vendor.Company,
+			}
+
+			<-s.semaphore // release lock
+			s.wg.Done()
+		}
+
+		time.AfterFunc(time.Second, wrapper)
+	}
 }

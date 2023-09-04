@@ -79,3 +79,16 @@ func (r *ArpScanResult) Serializable() interface{} {
 		MAC: r.MAC.String(),
 	}
 }
+
+type VendorResult struct {
+	MAC    net.HardwareAddr
+	Vendor string
+}
+
+type Vendor struct {
+	Success   bool   `json:"success"`
+	Found     bool   `json:"found"`
+	Error     string `json:"error"`
+	ErrorCode int    `json:"errorCode"`
+	Company   string `json:"company"`
+}

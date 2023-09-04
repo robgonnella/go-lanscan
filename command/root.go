@@ -24,6 +24,7 @@ import (
 type DeviceResult struct {
 	IP        net.IP           `json:"ip"`
 	MAC       net.HardwareAddr `json:"mac"`
+	Vendor    string           `json:"vendor"`
 	Status    scanner.Status   `json:"status"`
 	OpenPorts []uint16         `json:"openPorts"`
 }
@@ -32,11 +33,13 @@ func (r *DeviceResult) Serializable() interface{} {
 	return struct {
 		IP        string   `json:"ip"`
 		MAC       string   `json:"mac"`
+		Vendor    string   `json:"vendor"`
 		Status    string   `json:"status"`
 		OpenPorts []uint16 `json:"openPorts"`
 	}{
 		IP:        r.IP.String(),
 		MAC:       r.MAC.String(),
+		Vendor:    r.Vendor,
 		Status:    string(r.Status),
 		OpenPorts: r.OpenPorts,
 	}
@@ -65,6 +68,7 @@ func NewRoot() (*cobra.Command, error) {
 	var listenPort uint16
 	var ifaceName string
 	var targets []string
+	var vendorInfo bool
 
 	netInfo, err := network.GetNetworkInfo()
 
@@ -99,6 +103,7 @@ func NewRoot() (*cobra.Command, error) {
 				idleTimeoutSeconds,
 				noProgress,
 				printJson,
+				vendorInfo,
 			)
 
 			if err != nil {
@@ -116,6 +121,7 @@ func NewRoot() (*cobra.Command, error) {
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
 	cmd.Flags().StringVarP(&ifaceName, "interface", "i", netInfo.Interface.Name, "set the interface for scanning")
 	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{netInfo.Cidr}, "set targets for scanning")
+	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 
 	return cmd, nil
 }
@@ -123,6 +129,7 @@ func NewRoot() (*cobra.Command, error) {
 type rootRunner struct {
 	idleTimeoutSeconds int
 	printJson          bool
+	vendorChan         chan *scanner.VendorResult
 	noProgress         bool
 	targets            []string
 	totalTargets       int
@@ -152,6 +159,7 @@ func newRootRunner(
 	idleTimeoutSeconds int,
 	noProgress bool,
 	printJson bool,
+	vendorInfo bool,
 ) (*rootRunner, error) {
 	arpResults := make(chan *scanner.ArpScanResult)
 	arpDone := make(chan bool)
@@ -161,7 +169,7 @@ func newRootRunner(
 		netInfo,
 		arpResults,
 		arpDone,
-		scanner.WithSynIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
+		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 	)
 
 	if err != nil {
@@ -194,8 +202,14 @@ func newRootRunner(
 		synResults:         make(chan *scanner.SynScanResult),
 		synDone:            make(chan bool),
 		arpScanner:         arpScanner,
+		vendorChan:         make(chan *scanner.VendorResult),
 		errorChan:          make(chan error),
 		log:                logger.New(),
+	}
+
+	if vendorInfo {
+		option := scanner.WithVendorInfo(runner.vendorChan)
+		option(runner.arpScanner)
 	}
 
 	if runner.totalTargets > 0 {
@@ -260,6 +274,12 @@ func (runner *rootRunner) run() error {
 
 			runner.processSynDone(start)
 			return nil
+		case r, ok := <-runner.vendorChan:
+			if !ok {
+				continue
+			}
+
+			go runner.processVendorResult(r)
 		}
 	}
 }
@@ -360,7 +380,7 @@ func (runner *rootRunner) processArpDone() {
 		runner.listenPort,
 		runner.synResults,
 		runner.synDone,
-		scanner.WithSynIdleTimeout(time.Second*time.Duration(runner.idleTimeoutSeconds)),
+		scanner.WithIdleTimeout(time.Second*time.Duration(runner.idleTimeoutSeconds)),
 	)
 
 	if err != nil {
@@ -391,10 +411,25 @@ func (runner *rootRunner) processArpDone() {
 	}
 }
 
+func (runner *rootRunner) processVendorResult(result *scanner.VendorResult) {
+	runner.results.DeviceMux.Lock()
+	defer runner.results.DeviceMux.Unlock()
+
+	for i, r := range runner.results.Devices {
+		if r.MAC.String() == result.MAC.String() {
+			r.Vendor = result.Vendor
+			runner.results.Devices[i] = r
+			break
+		}
+	}
+}
+
 func (runner *rootRunner) arpAttemptCallback(a *scanner.Request) {
 	message := fmt.Sprintf("arp - scanning %s", a.IP)
+
 	runner.arpTracker.Message = message
 	runner.arpTracker.Increment(1)
+
 	if runner.arpTracker.IsDone() {
 		runner.arpTracker.Message = "arp - scan complete - compiling results"
 	}
@@ -425,10 +460,10 @@ func (runner *rootRunner) printArpResults() {
 
 	var arpTable = table.NewWriter()
 	arpTable.SetOutputMirror(os.Stdout)
-	arpTable.AppendHeader(table.Row{"IP", "MAC"})
+	arpTable.AppendHeader(table.Row{"IP", "MAC", "VENDOR"})
 
 	for _, t := range runner.results.Devices {
-		arpTable.AppendRow(table.Row{t.IP.String(), t.MAC.String()})
+		arpTable.AppendRow(table.Row{t.IP.String(), t.MAC.String(), t.Vendor})
 	}
 
 	arpTable.Render()
@@ -450,12 +485,13 @@ func (runner *rootRunner) printSynResults() {
 
 	var synTable = table.NewWriter()
 	synTable.SetOutputMirror(os.Stdout)
-	synTable.AppendHeader(table.Row{"IP", "MAC", "STATUS", "OPEN PORTS"})
+	synTable.AppendHeader(table.Row{"IP", "MAC", "VENDOR", "STATUS", "OPEN PORTS"})
 
 	for _, r := range runner.results.Devices {
 		synTable.AppendRow(table.Row{
 			r.IP.String(),
 			r.MAC.String(),
+			r.Vendor,
 			r.Status,
 			r.OpenPorts,
 		})
