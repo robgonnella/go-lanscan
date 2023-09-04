@@ -77,7 +77,7 @@ func NewRoot() (*cobra.Command, error) {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "lanscan",
+		Use:   "go-lanscan",
 		Short: "Scan your LAN!",
 		Long:  `CLI to scan your Local Area Network`,
 		RunE: func(cmd *cobra.Command, args []string) error {
