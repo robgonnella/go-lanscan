@@ -123,6 +123,8 @@ func NewRoot() (*cobra.Command, error) {
 	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{netInfo.Cidr}, "set targets for scanning")
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 
+	cmd.AddCommand(newVersion())
+
 	return cmd, nil
 }
 
