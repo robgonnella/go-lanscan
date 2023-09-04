@@ -51,7 +51,7 @@ sudo go-lanscan --no-progress --json
 
 You can provide the following options to all scanners
 
-- Provide call back for notifications when packet requests are sent to target
+- Provide callback for notifications when packet requests are sent to target
 
 ```go
   callback := func(request *scanner.Request) {
