@@ -24,6 +24,9 @@ func main() {
 	synResults := make(chan *scanner.SynScanResult)
 	synDone := make(chan bool)
 	listenPort := uint16(54321)
+	vendorCB := func(v *scanner.VendorResult) {
+		fmt.Printf("vendor result: %+v\n", v)
+	}
 
 	scanner, err := scanner.NewFullScanner(
 		netInfo,
@@ -32,6 +35,7 @@ func main() {
 		listenPort,
 		synResults,
 		synDone,
+		scanner.WithVendorInfo(vendorCB),
 	)
 
 	if err != nil {
@@ -46,15 +50,9 @@ func main() {
 
 	for {
 		select {
-		case result, ok := <-synResults:
-			if !ok {
-				continue
-			}
+		case result := <-synResults:
 			fmt.Printf("syn scan result: %+v\n", result)
-		case _, ok := <-synDone:
-			if !ok {
-				return
-			}
+		case <-synDone:
 			fmt.Println("syn scanning complete")
 			return
 		}
