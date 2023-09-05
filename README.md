@@ -25,8 +25,8 @@ sudo go-lanscan
 # scan specific ports
 sudo go-lanscan --ports 22,111,3000-9000
 
-# scan specific targets
-sudo go-lanscan --targets 192.22.22.1,192.56.42.1/24
+# scan specific targets   single ip          ip range          cidr
+sudo go-lanscan --targets 192.22.22.1,192.168.1.1-192.168.1.50,192.56.42.1/24
 
 # include vendor look-ups on mac addresses (scan will be a little slower)
 sudo go-lanscan --vendor

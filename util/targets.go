@@ -49,8 +49,23 @@ func LoopTargets(targets []string, f func(target net.IP) error) error {
 
 			return LoopNetIPHosts(ipnet, f)
 		} else {
-			if err := f(net.ParseIP(t)); err != nil {
-				return err
+			parts := strings.Split(t, "-")
+
+			if len(parts) > 1 {
+				start := net.ParseIP(parts[0])
+				end := net.ParseIP(parts[1])
+				// increment end by 1 to include it in loop
+				network.IncrementIP(end)
+
+				for ; !start.Equal(end); network.IncrementIP(start) {
+					if err := f(start); err != nil {
+						return err
+					}
+				}
+			} else {
+				if err := f(net.ParseIP(t)); err != nil {
+					return err
+				}
 			}
 		}
 	}
