@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // Full (ARP + SYN) Scanning example
 package main
 
