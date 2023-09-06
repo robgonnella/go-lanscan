@@ -104,14 +104,16 @@ The next option performs vendor look-ups for mac addresses and can only be
 applied to arpScanner and fullScanner.
 
 ```go
-  vendorResults := make(chan *scanner.VendorResult)
+  vendorCallback := func(result *scanner.VendorResult) {
+    fmt.Printf("received vendor result: %+v\n", result)
+  }
 
   arpScanner, err := scanner.NewArpScanner(
     targets,
     netInfo,
     arpResults,
     arpDone,
-    scanner.WithVendorInfo(vendorResults)
+    scanner.WithVendorInfo(vendorCallback)
   )
 
   if err != nil {
@@ -119,7 +121,7 @@ applied to arpScanner and fullScanner.
   }
 
   // or
-  option := scanner.WithVendorInfo(vendorResults)
+  option := scanner.WithVendorInfo(vendorCallback)
   option(arpScanner)
 ```
 
