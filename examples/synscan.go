@@ -46,7 +46,7 @@ func main() {
 		listenPort,
 		synResults,
 		synDone,
-		scanner.WithSynIdleTimeout(time.Second*5),
+		scanner.WithIdleTimeout(time.Second*5),
 	)
 
 	if err != nil {
@@ -61,15 +61,9 @@ func main() {
 
 	for {
 		select {
-		case result, ok := <-synResults:
-			if !ok {
-				continue
-			}
+		case result := <-synResults:
 			fmt.Printf("syn scan result: %+v\n", result)
-		case _, ok := <-synDone:
-			if !ok {
-				return
-			}
+		case <-synDone:
 			fmt.Println("syn scanning complete")
 			return
 		}

@@ -33,7 +33,7 @@ func main() {
 		netInfo,
 		arpResults,
 		arpDone,
-		scanner.WithSynIdleTimeout(time.Second*time.Duration(idleTimeout)),
+		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeout)),
 	)
 
 	if err != nil {
@@ -48,15 +48,9 @@ func main() {
 
 	for {
 		select {
-		case result, ok := <-arpResults:
-			if !ok {
-				continue
-			}
+		case result := <-arpResults:
 			fmt.Printf("arp scan result: %+v\n", result)
-		case _, ok := <-arpDone:
-			if !ok {
-				return
-			}
+		case <-arpDone:
 			fmt.Println("arp scanning complete")
 			return
 		}

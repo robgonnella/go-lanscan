@@ -21,7 +21,6 @@ type FullScanner struct {
 	netInfo        *network.NetworkInfo
 	options        []ScannerOption
 	devices        []*ArpScanResult
-	resultChan     chan *SynScanResult
 	done           chan bool
 	arpScanner     *ArpScanner
 	arpResult      chan *ArpScanResult
@@ -40,7 +39,7 @@ func NewFullScanner(
 	targets,
 	ports []string,
 	listenPort uint16,
-	resultChan chan *SynScanResult,
+	synResult chan *SynScanResult,
 	done chan bool,
 	options ...ScannerOption,
 ) (*FullScanner, error) {
@@ -69,13 +68,12 @@ func NewFullScanner(
 		listenPort:   listenPort,
 		ports:        ports,
 		devices:      []*ArpScanResult{},
-		resultChan:   resultChan,
 		done:         done,
 		arpScanner:   arpScanner,
 		arpResult:    arpResult,
 		arpDone:      arpDone,
 		synScanner:   nil,
-		synResult:    resultChan,
+		synResult:    synResult,
 		synDone:      done,
 		internalDone: make(chan bool),
 		errorChan:    make(chan error),
@@ -100,10 +98,9 @@ func (s *FullScanner) Scan() error {
 
 	for {
 		select {
-		case r, ok := <-s.arpResult:
-			if !ok {
-				continue
-			}
+		case <-s.ctx.Done():
+			return s.ctx.Err()
+		case r := <-s.arpResult:
 			if !util.SliceIncludesFunc(s.devices, func(d *ArpScanResult, i int) bool {
 				return d.IP.Equal(r.IP)
 			}) {
@@ -116,11 +113,7 @@ func (s *FullScanner) Scan() error {
 					return bytes.Compare(d1.IP, d2.IP)
 				})
 			}
-		case _, ok := <-s.arpDone:
-			if !ok {
-				continue
-			}
-
+		case <-s.arpDone:
 			synScanner, err := NewSynScanner(
 				s.devices,
 				s.netInfo,
@@ -160,6 +153,7 @@ func (s *FullScanner) Scan() error {
 
 func (s *FullScanner) Stop() {
 	s.cancel()
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
 func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {

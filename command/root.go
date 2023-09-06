@@ -212,7 +212,7 @@ func newRootRunner(
 	}
 
 	if vendorInfo {
-		option := scanner.WithVendorInfo(runner.vendorChan)
+		option := scanner.WithVendorInfo(runner.processVendorResult)
 		option(runner.arpScanner)
 	}
 
@@ -247,43 +247,17 @@ func (runner *rootRunner) run() error {
 
 	for {
 		select {
-		case err, ok := <-runner.errorChan:
-			if !ok {
-				continue
-			}
-
+		case err := <-runner.errorChan:
 			return err
-		case res, ok := <-runner.arpResults:
-			if !ok {
-				continue
-			}
-
+		case res := <-runner.arpResults:
 			go runner.processArpResult(res)
-		case _, ok := <-runner.arpDone:
-			if !ok {
-				continue
-			}
-
+		case <-runner.arpDone:
 			go runner.processArpDone()
-		case res, ok := <-runner.synResults:
-			if !ok {
-				continue
-			}
-
+		case res := <-runner.synResults:
 			go runner.processSynResult(res)
-		case _, ok := <-runner.synDone:
-			if !ok {
-				continue
-			}
-
+		case <-runner.synDone:
 			runner.processSynDone(start)
 			return nil
-		case r, ok := <-runner.vendorChan:
-			if !ok {
-				continue
-			}
-
-			go runner.processVendorResult(r)
 		}
 	}
 }

@@ -25,16 +25,16 @@ type ArpScanner struct {
 	cancel           context.CancelFunc
 	targets          []string
 	networkInfo      *network.NetworkInfo
-	inactiveHandle   *pcap.InactiveHandle
 	handle           *pcap.Handle
 	resultChan       chan *ArpScanResult
 	doneChan         chan bool
 	notificationCB   func(a *Request)
+	scanning         bool
 	requestsComplete bool
 	lastPacketTime   time.Time
 	idleTimeout      time.Duration
 	semaphore        chan struct{}
-	vendorChan       chan *VendorResult
+	vendorCB         func(v *VendorResult)
 	wg               *sync.WaitGroup
 	mux              sync.RWMutex
 }
@@ -46,16 +46,6 @@ func NewArpScanner(
 	doneChan chan bool,
 	options ...ScannerOption,
 ) (*ArpScanner, error) {
-	inactive, err := pcap.NewInactiveHandle(networkInfo.Interface.Name)
-
-	if err != nil {
-		return nil, err
-	}
-
-	inactive.SetPromisc(true)
-	inactive.SetSnapLen(65536)
-	inactive.SetTimeout(pcap.BlockForever)
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	scanner := &ArpScanner{
@@ -63,11 +53,11 @@ func NewArpScanner(
 		cancel:           cancel,
 		targets:          targets,
 		networkInfo:      networkInfo,
-		inactiveHandle:   inactive,
 		resultChan:       resultChan,
 		doneChan:         doneChan,
 		lastPacketTime:   time.Time{},
 		idleTimeout:      time.Second * 5,
+		scanning:         false,
 		requestsComplete: false,
 		semaphore:        make(chan struct{}, 1),
 		wg:               &sync.WaitGroup{},
@@ -82,13 +72,25 @@ func NewArpScanner(
 }
 
 func (s *ArpScanner) Scan() error {
-	handle, err := s.inactiveHandle.Activate()
+	if s.scanning {
+		return nil
+	}
+
+	// open a new handle each time so we don't hit buffer overflow error
+	handle, err := pcap.OpenLive(
+		s.networkInfo.Interface.Name,
+		65536,
+		true,
+		pcap.BlockForever,
+	)
 
 	if err != nil {
 		return err
 	}
 
 	s.handle = handle
+
+	s.scanning = true
 
 	go s.readPackets()
 
@@ -105,10 +107,13 @@ func (s *ArpScanner) Scan() error {
 
 func (s *ArpScanner) Stop() {
 	s.cancel()
-	s.inactiveHandle.CleanUp()
 	if s.handle != nil {
 		s.handle.Close()
 	}
+	s.lastPacketTime = time.Time{}
+	s.scanning = false
+	s.requestsComplete = false
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
 func (s *ArpScanner) SetRequestNotifications(cb func(a *Request)) {
@@ -127,6 +132,7 @@ func (s *ArpScanner) readPackets() {
 	for {
 		select {
 		case <-s.ctx.Done():
+			s.Stop()
 			return
 		case packet := <-packetSource.Packets():
 			arpLayer := packet.Layer(layers.LayerTypeARP)
@@ -143,16 +149,12 @@ func (s *ArpScanner) readPackets() {
 				s.wg.Wait() // wait for requests to finish
 				s.Stop()
 				s.doneChan <- true
-				close(s.doneChan)
-				close(s.resultChan)
 				return
 			}
 
 			if s.requestsComplete && packetTime.IsZero() && time.Since(start) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
-				close(s.doneChan)
-				close(s.resultChan)
 				return
 			}
 		}
@@ -253,7 +255,7 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 		MAC: mac,
 	}
 
-	if s.vendorChan != nil {
+	if s.vendorCB != nil {
 		s.wg.Add(1)
 
 		s.semaphore <- struct{}{} // acquire lock
@@ -274,10 +276,10 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 				vendor.Company = "Unknown"
 			}
 
-			s.vendorChan <- &VendorResult{
+			go s.vendorCB(&VendorResult{
 				MAC:    mac,
 				Vendor: vendor.Company,
-			}
+			})
 
 			<-s.semaphore // release lock
 			s.wg.Done()

@@ -23,12 +23,12 @@ type SynScanner struct {
 	targets          []*ArpScanResult
 	ports            []string
 	listenPort       uint16
-	inactiveHandle   *pcap.InactiveHandle
 	handle           *pcap.Handle
 	resultChan       chan *SynScanResult
 	doneChan         chan bool
 	notificationCB   func(a *Request)
 	lastPacketTime   time.Time
+	scanning         bool
 	requestsComplete bool
 	idleTimeout      time.Duration
 	mux              sync.RWMutex
@@ -62,11 +62,11 @@ func NewSynScanner(
 		networkInfo:      networkInfo,
 		ports:            ports,
 		listenPort:       listenPort,
-		inactiveHandle:   inactive,
 		resultChan:       resultChan,
 		doneChan:         doneChan,
 		lastPacketTime:   time.Time{},
 		idleTimeout:      time.Second * 5,
+		scanning:         false,
 		requestsComplete: false,
 		mux:              sync.RWMutex{},
 	}
@@ -79,13 +79,24 @@ func NewSynScanner(
 }
 
 func (s *SynScanner) Scan() error {
-	handle, err := s.inactiveHandle.Activate()
+	if s.scanning {
+		return nil
+	}
+
+	handle, err := pcap.OpenLive(
+		s.networkInfo.Interface.Name,
+		65536,
+		true,
+		pcap.BlockForever,
+	)
 
 	if err != nil {
 		return err
 	}
 
 	s.handle = handle
+
+	s.scanning = true
 
 	go s.readPackets()
 
@@ -110,10 +121,13 @@ func (s *SynScanner) Scan() error {
 
 func (s *SynScanner) Stop() {
 	s.cancel()
-	s.inactiveHandle.CleanUp()
 	if s.handle != nil {
 		s.handle.Close()
 	}
+	s.lastPacketTime = time.Time{}
+	s.scanning = false
+	s.requestsComplete = false
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
 func (s *SynScanner) SetRequestNotifications(cb func(a *Request)) {
@@ -132,6 +146,7 @@ func (s *SynScanner) readPackets() {
 	for {
 		select {
 		case <-s.ctx.Done():
+			s.Stop()
 			return
 		case packet := <-packetSource.Packets():
 			s.handlePacket(packet)
@@ -143,16 +158,12 @@ func (s *SynScanner) readPackets() {
 			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
-				close(s.doneChan)
-				close(s.resultChan)
 				return
 			}
 
 			if s.requestsComplete && packetTime.IsZero() && time.Since(start) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
-				close(s.doneChan)
-				close(s.resultChan)
 				return
 			}
 		}
