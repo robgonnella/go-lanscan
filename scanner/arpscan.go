@@ -124,6 +124,10 @@ func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
+func (s *ArpScanner) SetVendorCB(cb func(v *VendorResult)) {
+	s.vendorCB = cb
+}
+
 func (s *ArpScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
 	packetSource.NoCopy = true

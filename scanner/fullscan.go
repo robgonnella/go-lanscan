@@ -13,25 +13,23 @@ import (
 )
 
 type FullScanner struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	targets        []string
-	ports          []string
-	listenPort     uint16
-	netInfo        *network.NetworkInfo
-	options        []ScannerOption
-	devices        []*ArpScanResult
-	done           chan bool
-	arpScanner     *ArpScanner
-	arpResult      chan *ArpScanResult
-	arpDone        chan bool
-	synScanner     *SynScanner
-	synResult      chan *SynScanResult
-	synDone        chan bool
-	internalDone   chan bool
-	errorChan      chan error
-	idleTimeout    time.Duration
-	notificationCB func(req *Request)
+	ctx          context.Context
+	cancel       context.CancelFunc
+	targets      []string
+	ports        []string
+	listenPort   uint16
+	netInfo      *network.NetworkInfo
+	options      []ScannerOption
+	devices      []*ArpScanResult
+	done         chan bool
+	arpScanner   *ArpScanner
+	arpResult    chan *ArpScanResult
+	arpDone      chan bool
+	synScanner   *SynScanner
+	synResult    chan *SynScanResult
+	synDone      chan bool
+	internalDone chan bool
+	errorChan    chan error
 }
 
 func NewFullScanner(
@@ -157,9 +155,13 @@ func (s *FullScanner) Stop() {
 }
 
 func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {
-	s.notificationCB = cb
+	// nothing to do
 }
 
 func (s *FullScanner) SetIdleTimeout(d time.Duration) {
-	s.idleTimeout = d
+	// nothing to do
+}
+
+func (s *FullScanner) SetVendorCB(cd func(v *VendorResult)) {
+	// nothing to do
 }

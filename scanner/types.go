@@ -28,6 +28,7 @@ type Scanner interface {
 	Stop()
 	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
+	SetVendorCB(cb func(v *VendorResult))
 }
 
 // Status represents possible server statues

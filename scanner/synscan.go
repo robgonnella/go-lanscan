@@ -139,6 +139,10 @@ func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
+func (s *SynScanner) SetVendorCB(cd func(v *VendorResult)) {
+	// nothing to do
+}
+
 func (s *SynScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
 	packetSource.NoCopy = true
