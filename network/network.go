@@ -6,16 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/jackpal/gateway"
 )
 
 type NetworkInfo struct {
+	Hostname  string
 	Interface *net.Interface
-	Cidr      string
-	UserIP    net.IP
 	IPNet     *net.IPNet
+	Gateway   net.IP
+	UserIP    net.IP
+	Cidr      string
 }
 
 func IncrementIP(ip net.IP) {
@@ -25,6 +28,16 @@ func IncrementIP(ip net.IP) {
 			break
 		}
 	}
+}
+
+func Hostname() (*string, error) {
+	hostname, err := os.Hostname()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &hostname, nil
 }
 
 // get network interface associated with ip
@@ -59,6 +72,18 @@ func getIPNetByIP(ip net.IP) (*net.Interface, *net.IPNet, error) {
 }
 
 func GetNetworkInfoFromInterface(ifaceName string) (*NetworkInfo, error) {
+	gw, err := gateway.DiscoverGateway()
+
+	if err != nil {
+		return nil, err
+	}
+
+	hostname, err := Hostname()
+
+	if err != nil {
+		return nil, err
+	}
+
 	iface, err := net.InterfaceByName(ifaceName)
 
 	if err != nil {
@@ -84,6 +109,8 @@ func GetNetworkInfoFromInterface(ifaceName string) (*NetworkInfo, error) {
 	}
 
 	return &NetworkInfo{
+		Hostname:  *hostname,
+		Gateway:   gw,
 		Interface: iface,
 		Cidr:      cidr,
 		IPNet:     ipnet,
@@ -95,6 +122,12 @@ func GetNetworkInfoFromInterface(ifaceName string) (*NetworkInfo, error) {
 // outbound ip of this machine
 func GetNetworkInfo() (*NetworkInfo, error) {
 	gw, err := gateway.DiscoverGateway()
+
+	if err != nil {
+		return nil, err
+	}
+
+	hostname, err := Hostname()
 
 	if err != nil {
 		return nil, err
@@ -141,6 +174,8 @@ func GetNetworkInfo() (*NetworkInfo, error) {
 	cidr := fmt.Sprintf("%s/%d", firstCidrIP, size)
 
 	return &NetworkInfo{
+		Hostname:  *hostname,
+		Gateway:   gw,
 		Interface: iface,
 		Cidr:      cidr,
 		UserIP:    foundIP,
