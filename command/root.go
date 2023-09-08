@@ -28,16 +28,16 @@ type DeviceResult struct {
 	MAC       net.HardwareAddr `json:"mac"`
 	Vendor    string           `json:"vendor"`
 	Status    scanner.Status   `json:"status"`
-	OpenPorts []uint16         `json:"openPorts"`
+	OpenPorts []scanner.Port   `json:"openPorts"`
 }
 
 func (r *DeviceResult) Serializable() interface{} {
 	return struct {
-		IP        string   `json:"ip"`
-		MAC       string   `json:"mac"`
-		Vendor    string   `json:"vendor"`
-		Status    string   `json:"status"`
-		OpenPorts []uint16 `json:"openPorts"`
+		IP        string         `json:"ip"`
+		MAC       string         `json:"mac"`
+		Vendor    string         `json:"vendor"`
+		Status    string         `json:"status"`
+		OpenPorts []scanner.Port `json:"openPorts"`
 	}{
 		IP:        r.IP.String(),
 		MAC:       r.MAC.String(),
@@ -272,13 +272,27 @@ func (runner *rootRunner) processSynResult(result *scanner.SynScanResult) {
 
 	if targetIdx != -1 {
 		target := runner.results.Devices[targetIdx]
-		if !util.SliceIncludes(target.OpenPorts, result.Port.ID) {
+		exists := util.SliceIncludesFunc(target.OpenPorts, func(p scanner.Port, i int) bool {
+			return p.ID == result.Port.ID
+		})
+
+		if !exists {
 			target.OpenPorts = append(
 				target.OpenPorts,
-				result.Port.ID,
+				result.Port,
 			)
 
-			slices.Sort(target.OpenPorts)
+			slices.SortFunc(target.OpenPorts, func(p1, p2 scanner.Port) int {
+				if int(p1.ID) < int(p2.ID) {
+					return -1
+				}
+
+				if int(p1.ID) > int(p2.ID) {
+					return 1
+				}
+
+				return 0
+			})
 
 			runner.results.Devices[targetIdx] = target
 		}
@@ -290,15 +304,9 @@ func (runner *rootRunner) processSynDone(start time.Time) {
 	defer runner.results.DeviceMux.Unlock()
 
 	runner.synScanner.Stop()
-
-	if !runner.noProgress {
-		runner.synTracker.Message = "syn - scan complete"
-		runner.synTracker.Increment(10)
-	}
-
 	runner.printSynResults()
 
-	runner.log.Info().Str("duration", time.Since(start).String()).Msg("lan scan complete")
+	runner.log.Info().Str("duration", time.Since(start).String()).Msg("go-lanscan complete")
 }
 
 func (runner *rootRunner) processArpResult(result *scanner.ArpScanResult) {
@@ -314,7 +322,7 @@ func (runner *rootRunner) processArpResult(result *scanner.ArpScanResult) {
 			IP:        result.IP,
 			MAC:       result.MAC,
 			Status:    scanner.StatusOnline,
-			OpenPorts: []uint16{},
+			OpenPorts: []scanner.Port{},
 		})
 
 		slices.SortFunc(runner.results.Devices, func(r1, r2 *DeviceResult) int {
@@ -330,8 +338,6 @@ func (runner *rootRunner) processArpDone() {
 	runner.arpScanner.Stop()
 
 	if !runner.noProgress {
-		runner.arpTracker.Message = "arp - scan complete"
-		runner.arpTracker.Increment(10)
 		runner.printArpResults()
 
 		if len(runner.results.Devices) > 0 {
@@ -409,7 +415,13 @@ func (runner *rootRunner) arpAttemptCallback(a *scanner.Request) {
 	runner.arpTracker.Increment(1)
 
 	if runner.arpTracker.IsDone() {
-		runner.arpTracker.Message = "arp - scan complete - compiling results"
+		runner.arpTracker.Message = "arp - scan complete"
+		go func() {
+			// for some reason this needs to run in a goroutine with a delay
+			// otherwise the tracker output prevents this log line from printing
+			time.Sleep(time.Millisecond * 100)
+			runner.log.Info().Msg("compiling arp results...")
+		}()
 	}
 }
 
@@ -418,7 +430,13 @@ func (runner *rootRunner) synAttemptCallback(a *scanner.Request) {
 	runner.synTracker.Message = message
 	runner.synTracker.Increment(1)
 	if runner.synTracker.IsDone() {
-		runner.synTracker.Message = "syn - scan complete - compiling results"
+		runner.synTracker.Message = "syn - scan complete"
+		go func() {
+			// for some reason this needs to run in a goroutine with a delay
+			// otherwise the tracker output prevents this log line from printing
+			time.Sleep(time.Millisecond * 100)
+			runner.log.Info().Msg("compiling syn results...")
+		}()
 	}
 }
 
@@ -466,12 +484,18 @@ func (runner *rootRunner) printSynResults() {
 	synTable.AppendHeader(table.Row{"IP", "MAC", "VENDOR", "STATUS", "OPEN PORTS"})
 
 	for _, r := range runner.results.Devices {
+		openPorts := []string{}
+
+		for _, p := range r.OpenPorts {
+			openPorts = append(openPorts, fmt.Sprintf("%s:%d", p.Service, p.ID))
+		}
+
 		synTable.AppendRow(table.Row{
 			r.IP.String(),
 			r.MAC.String(),
 			r.Vendor,
 			r.Status,
-			r.OpenPorts,
+			openPorts,
 		})
 	}
 

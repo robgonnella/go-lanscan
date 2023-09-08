@@ -54,8 +54,9 @@ const (
 
 // Port data structure representing a server port
 type Port struct {
-	ID     uint16
-	Status PortStatus
+	ID      uint16
+	Service string
+	Status  PortStatus
 }
 
 // SynScanResult represents a single network device result from syn scan
