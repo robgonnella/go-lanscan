@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/thediveo/netdb"
 
 	"github.com/robgonnella/go-lanscan/network"
 	"github.com/robgonnella/go-lanscan/util"
@@ -213,13 +214,22 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 	s.mux.Unlock()
 
 	if tcp.SYN && tcp.ACK {
+		serviceName := ""
+
+		service := netdb.ServiceByPort(int(tcp.SrcPort), "")
+
+		if service != nil {
+			serviceName = service.Name
+		}
+
 		result := &SynScanResult{
 			MAC:    target.MAC,
 			IP:     target.IP,
 			Status: StatusOnline,
 			Port: Port{
-				ID:     uint16(tcp.SrcPort),
-				Status: PortOpen,
+				ID:      uint16(tcp.SrcPort),
+				Service: serviceName,
+				Status:  PortOpen,
 			},
 		}
 
