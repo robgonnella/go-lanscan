@@ -14,13 +14,14 @@ import (
 
 	"github.com/jedib0t/go-pretty/progress"
 	"github.com/jedib0t/go-pretty/table"
+	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
+
 	"github.com/robgonnella/go-lanscan/logger"
 	"github.com/robgonnella/go-lanscan/network"
 	"github.com/robgonnella/go-lanscan/scanner"
 	"github.com/robgonnella/go-lanscan/util"
-	"github.com/rs/zerolog"
-	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 type DeviceResult struct {
@@ -133,7 +134,6 @@ func NewRoot() (*cobra.Command, error) {
 type rootRunner struct {
 	idleTimeoutSeconds int
 	printJson          bool
-	vendorChan         chan *scanner.VendorResult
 	noProgress         bool
 	targets            []string
 	totalTargets       int
@@ -149,9 +149,9 @@ type rootRunner struct {
 	arpDone            chan bool
 	synResults         chan *scanner.SynScanResult
 	synDone            chan bool
+	vendorChan         chan *scanner.VendorResult
 	errorChan          chan error
-	arpScanner         scanner.Scanner
-	synScanner         scanner.Scanner
+	scanner            scanner.Scanner
 	log                logger.Logger
 }
 
@@ -168,11 +168,18 @@ func newRootRunner(
 	arpResults := make(chan *scanner.ArpScanResult)
 	arpDone := make(chan bool)
 
-	arpScanner, err := scanner.NewArpScanner(
-		targets,
+	synResults := make(chan *scanner.SynScanResult)
+	synDone := make(chan bool)
+
+	fullScanner, err := scanner.NewFullScanner(
 		netInfo,
+		targets,
+		ports,
+		listenPort,
 		arpResults,
 		arpDone,
+		synResults,
+		synDone,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 	)
 
@@ -203,17 +210,16 @@ func newRootRunner(
 		synTracker:         tracker(pw, "starting syn scan", false),
 		arpResults:         arpResults,
 		arpDone:            arpDone,
-		synResults:         make(chan *scanner.SynScanResult),
-		synDone:            make(chan bool),
-		arpScanner:         arpScanner,
+		synResults:         synResults,
+		synDone:            synDone,
+		scanner:            fullScanner,
 		vendorChan:         make(chan *scanner.VendorResult),
 		errorChan:          make(chan error),
 		log:                logger.New(),
 	}
 
 	if vendorInfo {
-		option := scanner.WithVendorInfo(runner.processVendorResult)
-		option(runner.arpScanner)
+		fullScanner.SetVendorCB(runner.processVendorResult)
 	}
 
 	if runner.totalTargets > 0 {
@@ -225,7 +231,7 @@ func newRootRunner(
 	if noProgress {
 		logger.SetGlobalLevel(zerolog.Disabled)
 	} else {
-		arpScanner.SetRequestNotifications(runner.arpAttemptCallback)
+		fullScanner.SetRequestNotifications(runner.requestCallback)
 	}
 
 	return runner, nil
@@ -240,7 +246,7 @@ func (runner *rootRunner) run() error {
 
 	// run in go routine so we can process in results in parallel
 	go func() {
-		if err := runner.arpScanner.Scan(); err != nil {
+		if err := runner.scanner.Scan(); err != nil {
 			runner.errorChan <- err
 		}
 	}()
@@ -303,7 +309,7 @@ func (runner *rootRunner) processSynDone(start time.Time) {
 	runner.results.DeviceMux.Lock()
 	defer runner.results.DeviceMux.Unlock()
 
-	runner.synScanner.Stop()
+	runner.scanner.Stop()
 	runner.printSynResults()
 
 	runner.log.Info().Str("duration", time.Since(start).String()).Msg("go-lanscan complete")
@@ -335,8 +341,6 @@ func (runner *rootRunner) processArpDone() {
 	runner.results.DeviceMux.Lock()
 	defer runner.results.DeviceMux.Unlock()
 
-	runner.arpScanner.Stop()
-
 	if !runner.noProgress {
 		runner.printArpResults()
 
@@ -348,50 +352,12 @@ func (runner *rootRunner) processArpDone() {
 		}
 	}
 
-	synTargets := []*scanner.ArpScanResult{}
-
-	for _, r := range runner.results.Devices {
-		synTargets = append(synTargets, &scanner.ArpScanResult{
-			IP:  r.IP,
-			MAC: r.MAC,
-		})
-	}
-
-	synScanner, err := scanner.NewSynScanner(
-		synTargets,
-		runner.netInfo,
-		runner.ports,
-		runner.listenPort,
-		runner.synResults,
-		runner.synDone,
-		scanner.WithIdleTimeout(time.Second*time.Duration(runner.idleTimeoutSeconds)),
-	)
-
-	if err != nil {
-		go func() {
-			runner.errorChan <- err
-		}()
-	}
-
-	if !runner.noProgress {
-		synScanner.SetRequestNotifications(runner.synAttemptCallback)
-	}
-
-	runner.synScanner = synScanner
-
 	if len(runner.results.Devices) == 0 {
 		go func() {
 			runner.synDone <- true
 		}()
 
 		return
-	}
-
-	// run in goroutine so we can process results in parallel
-	if err := synScanner.Scan(); err != nil {
-		go func() {
-			runner.errorChan <- err
-		}()
 	}
 }
 
@@ -408,35 +374,37 @@ func (runner *rootRunner) processVendorResult(result *scanner.VendorResult) {
 	}
 }
 
-func (runner *rootRunner) arpAttemptCallback(a *scanner.Request) {
-	message := fmt.Sprintf("arp - scanning %s", a.IP)
+func (runner *rootRunner) requestCallback(r *scanner.Request) {
+	if r.Type == scanner.ArpRequest {
+		message := fmt.Sprintf("arp - scanning %s", r.IP)
 
-	runner.arpTracker.Message = message
-	runner.arpTracker.Increment(1)
+		runner.arpTracker.Message = message
+		runner.arpTracker.Increment(1)
 
-	if runner.arpTracker.IsDone() {
-		runner.arpTracker.Message = "arp - scan complete"
-		go func() {
-			// for some reason this needs to run in a goroutine with a delay
-			// otherwise the tracker output prevents this log line from printing
-			time.Sleep(time.Millisecond * 100)
-			runner.log.Info().Msg("compiling arp results...")
-		}()
+		if runner.arpTracker.IsDone() {
+			runner.arpTracker.Message = "arp - scan complete"
+			go func() {
+				// for some reason this needs to run in a goroutine with a delay
+				// otherwise the tracker output prevents this log line from printing
+				time.Sleep(time.Millisecond * 100)
+				runner.log.Info().Msg("compiling arp results...")
+			}()
+		}
 	}
-}
 
-func (runner *rootRunner) synAttemptCallback(a *scanner.Request) {
-	message := fmt.Sprintf("syn - scanning port %d on %s", a.Port, a.IP)
-	runner.synTracker.Message = message
-	runner.synTracker.Increment(1)
-	if runner.synTracker.IsDone() {
-		runner.synTracker.Message = "syn - scan complete"
-		go func() {
-			// for some reason this needs to run in a goroutine with a delay
-			// otherwise the tracker output prevents this log line from printing
-			time.Sleep(time.Millisecond * 100)
-			runner.log.Info().Msg("compiling syn results...")
-		}()
+	if r.Type == scanner.SynRequest {
+		message := fmt.Sprintf("syn - scanning port %d on %s", r.Port, r.IP)
+		runner.synTracker.Message = message
+		runner.synTracker.Increment(1)
+		if runner.synTracker.IsDone() {
+			runner.synTracker.Message = "syn - scan complete"
+			go func() {
+				// for some reason this needs to run in a goroutine with a delay
+				// otherwise the tracker output prevents this log line from printing
+				time.Sleep(time.Millisecond * 100)
+				runner.log.Info().Msg("compiling syn results...")
+			}()
+		}
 	}
 }
 
