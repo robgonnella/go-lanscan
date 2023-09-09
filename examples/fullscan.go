@@ -21,6 +21,8 @@ func main() {
 
 	targets := []string{}
 	ports := []string{"22", "111", "2000-4000"}
+	arpResults := make(chan *scanner.ArpScanResult)
+	arpDone := make(chan bool)
 	synResults := make(chan *scanner.SynScanResult)
 	synDone := make(chan bool)
 	listenPort := uint16(54321)
@@ -33,6 +35,8 @@ func main() {
 		targets,
 		ports,
 		listenPort,
+		arpResults,
+		arpDone,
 		synResults,
 		synDone,
 		scanner.WithVendorInfo(vendorCB),
@@ -50,6 +54,10 @@ func main() {
 
 	for {
 		select {
+		case result := <-arpResults:
+			fmt.Printf("arp scan result: %+v\n", result)
+		case <-arpDone:
+			fmt.Println("arp scanning complete")
 		case result := <-synResults:
 			fmt.Printf("syn scan result: %+v\n", result)
 		case <-synDone:

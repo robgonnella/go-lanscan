@@ -13,23 +13,25 @@ import (
 )
 
 type FullScanner struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
-	targets      []string
-	ports        []string
-	listenPort   uint16
-	netInfo      *network.NetworkInfo
-	options      []ScannerOption
-	devices      []*ArpScanResult
-	done         chan bool
-	arpScanner   *ArpScanner
-	arpResult    chan *ArpScanResult
-	arpDone      chan bool
-	synScanner   *SynScanner
-	synResult    chan *SynScanResult
-	synDone      chan bool
-	internalDone chan bool
-	errorChan    chan error
+	ctx               context.Context
+	cancel            context.CancelFunc
+	targets           []string
+	ports             []string
+	listenPort        uint16
+	netInfo           *network.NetworkInfo
+	options           []ScannerOption
+	devices           []*ArpScanResult
+	done              chan bool
+	arpScanner        *ArpScanner
+	consumerArpResult chan *ArpScanResult
+	internalArpResult chan *ArpScanResult
+	consumerArpDone   chan bool
+	internalArpDone   chan bool
+	synScanner        *SynScanner
+	synResult         chan *SynScanResult
+	synDone           chan bool
+	internalDone      chan bool
+	errorChan         chan error
 }
 
 func NewFullScanner(
@@ -37,18 +39,20 @@ func NewFullScanner(
 	targets,
 	ports []string,
 	listenPort uint16,
+	consumerArpResult chan *ArpScanResult,
+	consumerArpDone chan bool,
 	synResult chan *SynScanResult,
 	done chan bool,
 	options ...ScannerOption,
 ) (*FullScanner, error) {
-	arpResult := make(chan *ArpScanResult)
-	arpDone := make(chan bool)
+	internalArpResult := make(chan *ArpScanResult)
+	internalArpDone := make(chan bool)
 
 	arpScanner, err := NewArpScanner(
 		targets,
 		netInfo,
-		arpResult,
-		arpDone,
+		internalArpResult,
+		internalArpDone,
 		options...,
 	)
 
@@ -59,23 +63,25 @@ func NewFullScanner(
 	ctx, cancel := context.WithCancel(context.Background())
 
 	scanner := &FullScanner{
-		ctx:          ctx,
-		cancel:       cancel,
-		netInfo:      netInfo,
-		targets:      targets,
-		listenPort:   listenPort,
-		ports:        ports,
-		devices:      []*ArpScanResult{},
-		done:         done,
-		arpScanner:   arpScanner,
-		arpResult:    arpResult,
-		arpDone:      arpDone,
-		synScanner:   nil,
-		synResult:    synResult,
-		synDone:      done,
-		internalDone: make(chan bool),
-		errorChan:    make(chan error),
-		options:      options,
+		ctx:               ctx,
+		cancel:            cancel,
+		netInfo:           netInfo,
+		targets:           targets,
+		listenPort:        listenPort,
+		ports:             ports,
+		devices:           []*ArpScanResult{},
+		done:              done,
+		arpScanner:        arpScanner,
+		consumerArpResult: consumerArpResult,
+		consumerArpDone:   consumerArpDone,
+		internalArpResult: internalArpResult,
+		internalArpDone:   internalArpDone,
+		synScanner:        nil,
+		synResult:         synResult,
+		synDone:           done,
+		internalDone:      make(chan bool),
+		errorChan:         make(chan error),
+		options:           options,
 	}
 
 	for _, o := range options {
@@ -98,7 +104,11 @@ func (s *FullScanner) Scan() error {
 		select {
 		case <-s.ctx.Done():
 			return s.ctx.Err()
-		case r := <-s.arpResult:
+		case r := <-s.internalArpResult:
+			go func() {
+				s.consumerArpResult <- r
+			}()
+
 			if !util.SliceIncludesFunc(s.devices, func(d *ArpScanResult, i int) bool {
 				return d.IP.Equal(r.IP)
 			}) {
@@ -111,7 +121,11 @@ func (s *FullScanner) Scan() error {
 					return bytes.Compare(d1.IP, d2.IP)
 				})
 			}
-		case <-s.arpDone:
+		case <-s.internalArpDone:
+			go func() {
+				s.consumerArpDone <- true
+			}()
+
 			synScanner, err := NewSynScanner(
 				s.devices,
 				s.netInfo,
@@ -132,18 +146,9 @@ func (s *FullScanner) Scan() error {
 				}
 				s.internalDone <- true
 			}()
-
-		case _, ok := <-s.internalDone:
-			if !ok {
-				continue
-			}
-
+		case <-s.internalDone:
 			return nil
-		case err, ok := <-s.errorChan:
-			if !ok {
-				continue
-			}
-
+		case err := <-s.errorChan:
 			return err
 		}
 	}
@@ -155,13 +160,16 @@ func (s *FullScanner) Stop() {
 }
 
 func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {
-	// nothing to do
+	s.arpScanner.SetRequestNotifications(cb)
+	s.options = append(s.options, WithRequestNotifications(cb))
 }
 
 func (s *FullScanner) SetIdleTimeout(d time.Duration) {
-	// nothing to do
+	s.arpScanner.SetIdleTimeout(d)
+	s.options = append(s.options, WithIdleTimeout(d))
 }
 
-func (s *FullScanner) SetVendorCB(cd func(v *VendorResult)) {
-	// nothing to do
+func (s *FullScanner) SetVendorCB(cb func(v *VendorResult)) {
+	s.arpScanner.SetVendorCB(cb)
+	s.options = append(s.options, WithVendorInfo(cb))
 }
