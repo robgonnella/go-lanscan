@@ -21,24 +21,18 @@ func main() {
 
 	targets := []string{}
 	ports := []string{"22", "111", "2000-4000"}
-	arpResults := make(chan *scanner.ArpScanResult)
-	arpDone := make(chan bool)
-	synResults := make(chan *scanner.SynScanResult)
-	synDone := make(chan bool)
+	scanResults := make(chan *scanner.ScanResult)
 	listenPort := uint16(54321)
 	vendorCB := func(v *scanner.VendorResult) {
 		fmt.Printf("vendor result: %+v\n", v)
 	}
 
-	scanner, err := scanner.NewFullScanner(
+	fullScanner, err := scanner.NewFullScanner(
 		netInfo,
 		targets,
 		ports,
 		listenPort,
-		arpResults,
-		arpDone,
-		synResults,
-		synDone,
+		scanResults,
 		scanner.WithVendorInfo(vendorCB),
 	)
 
@@ -47,22 +41,25 @@ func main() {
 	}
 
 	go func() {
-		if err := scanner.Scan(); err != nil {
+		if err := fullScanner.Scan(); err != nil {
 			panic(err)
 		}
 	}()
 
 	for {
 		select {
-		case result := <-arpResults:
-			fmt.Printf("arp scan result: %+v\n", result)
-		case <-arpDone:
-			fmt.Println("arp scanning complete")
-		case result := <-synResults:
-			fmt.Printf("syn scan result: %+v\n", result)
-		case <-synDone:
-			fmt.Println("syn scanning complete")
-			return
+		case res := <-scanResults:
+			switch res.Type {
+			case scanner.ARPResult:
+				fmt.Printf("arp scan result: %+v\n", res.Payload)
+			case scanner.ARPDone:
+				fmt.Println("arp scanning complete")
+			case scanner.SYNResult:
+				fmt.Printf("syn scan result: %+v\n", res.Payload)
+			case scanner.SYNDone:
+				fmt.Println("syn scanning complete")
+				return
+			}
 		}
 	}
 }

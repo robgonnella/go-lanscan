@@ -21,16 +21,13 @@ type FullScanner struct {
 	netInfo           *network.NetworkInfo
 	options           []ScannerOption
 	devices           []*ArpScanResult
-	done              chan bool
 	arpScanner        *ArpScanner
-	consumerArpResult chan *ArpScanResult
 	internalArpResult chan *ArpScanResult
-	consumerArpDone   chan bool
 	internalArpDone   chan bool
 	synScanner        *SynScanner
-	synResult         chan *SynScanResult
-	synDone           chan bool
-	internalDone      chan bool
+	internalSynResult chan *SynScanResult
+	internalSynDone   chan bool
+	consumerResults   chan *ScanResult
 	errorChan         chan error
 }
 
@@ -39,10 +36,7 @@ func NewFullScanner(
 	targets,
 	ports []string,
 	listenPort uint16,
-	consumerArpResult chan *ArpScanResult,
-	consumerArpDone chan bool,
-	synResult chan *SynScanResult,
-	done chan bool,
+	results chan *ScanResult,
 	options ...ScannerOption,
 ) (*FullScanner, error) {
 	internalArpResult := make(chan *ArpScanResult)
@@ -70,16 +64,13 @@ func NewFullScanner(
 		listenPort:        listenPort,
 		ports:             ports,
 		devices:           []*ArpScanResult{},
-		done:              done,
+		consumerResults:   results,
 		arpScanner:        arpScanner,
-		consumerArpResult: consumerArpResult,
-		consumerArpDone:   consumerArpDone,
 		internalArpResult: internalArpResult,
 		internalArpDone:   internalArpDone,
 		synScanner:        nil,
-		synResult:         synResult,
-		synDone:           done,
-		internalDone:      make(chan bool),
+		internalSynResult: make(chan *SynScanResult),
+		internalSynDone:   make(chan bool),
 		errorChan:         make(chan error),
 		options:           options,
 	}
@@ -106,7 +97,10 @@ func (s *FullScanner) Scan() error {
 			return s.ctx.Err()
 		case r := <-s.internalArpResult:
 			go func() {
-				s.consumerArpResult <- r
+				s.consumerResults <- &ScanResult{
+					Type:    ARPResult,
+					Payload: r,
+				}
 			}()
 
 			if !util.SliceIncludesFunc(s.devices, func(d *ArpScanResult, i int) bool {
@@ -123,7 +117,9 @@ func (s *FullScanner) Scan() error {
 			}
 		case <-s.internalArpDone:
 			go func() {
-				s.consumerArpDone <- true
+				s.consumerResults <- &ScanResult{
+					Type: ARPDone,
+				}
 			}()
 
 			synScanner, err := NewSynScanner(
@@ -131,8 +127,8 @@ func (s *FullScanner) Scan() error {
 				s.netInfo,
 				s.ports,
 				s.listenPort,
-				s.synResult,
-				s.synDone,
+				s.internalSynResult,
+				s.internalSynDone,
 				s.options...,
 			)
 
@@ -144,9 +140,20 @@ func (s *FullScanner) Scan() error {
 				if err := synScanner.Scan(); err != nil {
 					s.errorChan <- err
 				}
-				s.internalDone <- true
 			}()
-		case <-s.internalDone:
+		case r := <-s.internalSynResult:
+			go func() {
+				s.consumerResults <- &ScanResult{
+					Type:    SYNResult,
+					Payload: r,
+				}
+			}()
+		case <-s.internalSynDone:
+			go func() {
+				s.consumerResults <- &ScanResult{
+					Type: SYNDone,
+				}
+			}()
 			return nil
 		case err := <-s.errorChan:
 			return err

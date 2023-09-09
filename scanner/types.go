@@ -74,6 +74,20 @@ type ArpScanResult struct {
 	IP  net.IP
 }
 
+type ResultType string
+
+const (
+	ARPResult ResultType = "ARP"
+	ARPDone   ResultType = "ARP_DONE"
+	SYNResult ResultType = "SYN"
+	SYNDone   ResultType = "SYN_DONE"
+)
+
+type ScanResult struct {
+	Type    ResultType
+	Payload any
+}
+
 func (r *ArpScanResult) Serializable() interface{} {
 	return struct {
 		IP  string `json:"ip"`

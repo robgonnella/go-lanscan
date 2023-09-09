@@ -145,10 +145,7 @@ type rootRunner struct {
 	pw                 progress.Writer
 	arpTracker         *progress.Tracker
 	synTracker         *progress.Tracker
-	arpResults         chan *scanner.ArpScanResult
-	arpDone            chan bool
-	synResults         chan *scanner.SynScanResult
-	synDone            chan bool
+	scanResults        chan *scanner.ScanResult
 	vendorChan         chan *scanner.VendorResult
 	errorChan          chan error
 	scanner            scanner.Scanner
@@ -165,21 +162,14 @@ func newRootRunner(
 	printJson bool,
 	vendorInfo bool,
 ) (*rootRunner, error) {
-	arpResults := make(chan *scanner.ArpScanResult)
-	arpDone := make(chan bool)
-
-	synResults := make(chan *scanner.SynScanResult)
-	synDone := make(chan bool)
+	scanResults := make(chan *scanner.ScanResult)
 
 	fullScanner, err := scanner.NewFullScanner(
 		netInfo,
 		targets,
 		ports,
 		listenPort,
-		arpResults,
-		arpDone,
-		synResults,
-		synDone,
+		scanResults,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 	)
 
@@ -208,10 +198,7 @@ func newRootRunner(
 		totalHosts:         util.IPHostTotal(netInfo.IPNet),
 		arpTracker:         tracker(pw, "starting arp scan", true),
 		synTracker:         tracker(pw, "starting syn scan", false),
-		arpResults:         arpResults,
-		arpDone:            arpDone,
-		synResults:         synResults,
-		synDone:            synDone,
+		scanResults:        scanResults,
 		scanner:            fullScanner,
 		vendorChan:         make(chan *scanner.VendorResult),
 		errorChan:          make(chan error),
@@ -255,15 +242,18 @@ func (runner *rootRunner) run() error {
 		select {
 		case err := <-runner.errorChan:
 			return err
-		case res := <-runner.arpResults:
-			go runner.processArpResult(res)
-		case <-runner.arpDone:
-			go runner.processArpDone()
-		case res := <-runner.synResults:
-			go runner.processSynResult(res)
-		case <-runner.synDone:
-			runner.processSynDone(start)
-			return nil
+		case res := <-runner.scanResults:
+			switch res.Type {
+			case scanner.ARPResult:
+				go runner.processArpResult(res.Payload.(*scanner.ArpScanResult))
+			case scanner.ARPDone:
+				go runner.processArpDone()
+			case scanner.SYNResult:
+				go runner.processSynResult(res.Payload.(*scanner.SynScanResult))
+			case scanner.SYNDone:
+				runner.processSynDone(start)
+				return nil
+			}
 		}
 	}
 }
@@ -354,7 +344,9 @@ func (runner *rootRunner) processArpDone() {
 
 	if len(runner.results.Devices) == 0 {
 		go func() {
-			runner.synDone <- true
+			runner.scanResults <- &scanner.ScanResult{
+				Type: scanner.SYNDone,
+			}
 		}()
 
 		return
