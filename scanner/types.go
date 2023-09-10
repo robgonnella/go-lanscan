@@ -28,7 +28,7 @@ type Scanner interface {
 	Stop()
 	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
-	SetVendorCB(cb func(v *VendorResult))
+	IncludeVendorInfo(value bool)
 }
 
 // Status represents possible server statues
@@ -70,8 +70,9 @@ type SynScanResult struct {
 
 // ArpScanResult represents a single network device result from arp scan
 type ArpScanResult struct {
-	MAC net.HardwareAddr
-	IP  net.IP
+	IP     net.IP
+	MAC    net.HardwareAddr
+	Vendor string
 }
 
 type ResultType string
@@ -90,23 +91,12 @@ type ScanResult struct {
 
 func (r *ArpScanResult) Serializable() interface{} {
 	return struct {
-		IP  string `json:"ip"`
-		MAC string `json:"mac"`
+		IP     string `json:"ip"`
+		MAC    string `json:"mac"`
+		Vendor string `json:"vendor"`
 	}{
-		IP:  r.IP.String(),
-		MAC: r.MAC.String(),
+		IP:     r.IP.String(),
+		MAC:    r.MAC.String(),
+		Vendor: r.Vendor,
 	}
-}
-
-type VendorResult struct {
-	MAC    net.HardwareAddr
-	Vendor string
-}
-
-type Vendor struct {
-	Success   bool   `json:"success"`
-	Found     bool   `json:"found"`
-	Error     string `json:"error"`
-	ErrorCode int    `json:"errorCode"`
-	Company   string `json:"company"`
 }

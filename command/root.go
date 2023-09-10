@@ -143,7 +143,6 @@ type rootRunner struct {
 	arpTracker         *progress.Tracker
 	synTracker         *progress.Tracker
 	scanResults        chan *scanner.ScanResult
-	vendorChan         chan *scanner.VendorResult
 	errorChan          chan error
 	scanner            scanner.Scanner
 	log                logger.Logger
@@ -168,6 +167,7 @@ func newRootRunner(
 		listenPort,
 		scanResults,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
+		scanner.WithVendorInfo(vendorInfo),
 	)
 
 	pw := progressWriter()
@@ -193,13 +193,8 @@ func newRootRunner(
 		synTracker:         tracker(pw, "starting syn scan", false),
 		scanResults:        scanResults,
 		scanner:            fullScanner,
-		vendorChan:         make(chan *scanner.VendorResult),
 		errorChan:          make(chan error),
 		log:                logger.New(),
-	}
-
-	if vendorInfo {
-		fullScanner.SetVendorCB(runner.processVendorResult)
 	}
 
 	if runner.totalTargets > 0 {
@@ -311,6 +306,7 @@ func (runner *rootRunner) processArpResult(result *scanner.ArpScanResult) {
 			IP:        result.IP,
 			MAC:       result.MAC,
 			Status:    scanner.StatusOnline,
+			Vendor:    result.Vendor,
 			OpenPorts: []scanner.Port{},
 		})
 
@@ -343,19 +339,6 @@ func (runner *rootRunner) processArpDone() {
 		}()
 
 		return
-	}
-}
-
-func (runner *rootRunner) processVendorResult(result *scanner.VendorResult) {
-	runner.results.DeviceMux.Lock()
-	defer runner.results.DeviceMux.Unlock()
-
-	for i, r := range runner.results.Devices {
-		if r.MAC.String() == result.MAC.String() {
-			r.Vendor = result.Vendor
-			runner.results.Devices[i] = r
-			break
-		}
 	}
 }
 

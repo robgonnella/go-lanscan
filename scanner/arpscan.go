@@ -37,9 +37,8 @@ type ArpScanner struct {
 	requestsComplete bool
 	lastPacketTime   time.Time
 	idleTimeout      time.Duration
-	vendorCB         func(v *VendorResult)
+	includeVendor    bool
 	ouiDb            *oui.StaticDB
-	wg               *sync.WaitGroup
 	mux              sync.RWMutex
 }
 
@@ -63,7 +62,7 @@ func NewArpScanner(
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		requestsComplete: false,
-		wg:               &sync.WaitGroup{},
+		includeVendor:    false,
 		mux:              sync.RWMutex{},
 	}
 
@@ -131,8 +130,8 @@ func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
-func (s *ArpScanner) SetVendorCB(cb func(v *VendorResult)) {
-	s.vendorCB = cb
+func (s *ArpScanner) IncludeVendorInfo(value bool) {
+	s.includeVendor = value
 }
 
 func (s *ArpScanner) readPackets() {
@@ -157,7 +156,6 @@ func (s *ArpScanner) readPackets() {
 			s.mux.RUnlock()
 
 			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
-				s.wg.Wait() // wait for requests to finish
 				s.Stop()
 				s.doneChan <- true
 				return
@@ -261,35 +259,25 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 }
 
 func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
-	s.resultChan <- &ArpScanResult{
-		IP:  ip,
-		MAC: mac,
+	arpResult := &ArpScanResult{
+		IP:     ip,
+		MAC:    mac,
+		Vendor: "unknown",
 	}
 
-	if s.vendorCB != nil {
-		s.wg.Add(1)
-		defer s.wg.Done()
-
-		vendor := &Vendor{Company: "Unknown"}
-
+	if s.includeVendor {
 		db := *s.ouiDb
 
 		entry, err := db.Query(strings.ReplaceAll(mac.String(), ":", "-"))
 
-		if err != nil {
-			go s.vendorCB(&VendorResult{
-				MAC:    mac,
-				Vendor: vendor.Company,
-			})
-
-			return
+		if err == nil && entry.Manufacturer != "" {
+			arpResult.Vendor = entry.Manufacturer
 		}
-
-		go s.vendorCB(&VendorResult{
-			MAC:    mac,
-			Vendor: entry.Manufacturer,
-		})
 	}
+
+	go func() {
+		s.resultChan <- arpResult
+	}()
 }
 
 func (s *ArpScanner) initOuiDB() error {
@@ -304,7 +292,7 @@ func (s *ArpScanner) initOuiDB() error {
 
 	_, err = os.Stat(ouiTxt)
 
-	if errors.Is(err, os.ErrNotExist) && s.vendorCB != nil && s.ouiDb == nil {
+	if errors.Is(err, os.ErrNotExist) && s.includeVendor && s.ouiDb == nil {
 		resp, err := http.Get("https://standards-oui.ieee.org/oui/oui.txt")
 
 		if err != nil {
