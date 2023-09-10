@@ -31,6 +31,10 @@ sudo go-lanscan --targets 192.22.22.1,192.168.1.1-192.168.1.50,192.56.42.1/24
 # include vendor look-ups on mac addresses (scan will be a little slower)
 sudo go-lanscan --vendor
 
+# update static database used for vendor lookups
+# static file is located at ~/.config/go-lanscan/oui.txt
+sudo go-lanscan update-vendors
+
 # choose specific interface when scanning
 sudo go-lanscan --interface en0
 
@@ -97,7 +101,9 @@ You can provide the following options to all scanners
 ```
 
 The next option performs vendor look-ups for mac addresses and can only be
-applied to arpScanner and fullScanner.
+applied to arpScanner and fullScanner. Vendor lookup is performed by downloading
+a static database from https://standards-oui.ieee.org/oui/oui.txt and performing
+queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
 
 ```go
   vendorCallback := func(result *scanner.VendorResult) {

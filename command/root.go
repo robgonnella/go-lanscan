@@ -123,6 +123,7 @@ func NewRoot() (*cobra.Command, error) {
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 
 	cmd.AddCommand(newVersion())
+	cmd.AddCommand(newUpdateVendors())
 
 	return cmd, nil
 }

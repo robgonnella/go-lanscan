@@ -5,16 +5,20 @@ package scanner
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
+	"errors"
+	"io"
 	"net"
 	"net/http"
+	"os"
+	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/klauspost/oui"
 
 	"github.com/robgonnella/go-lanscan/network"
 	"github.com/robgonnella/go-lanscan/util"
@@ -33,8 +37,8 @@ type ArpScanner struct {
 	requestsComplete bool
 	lastPacketTime   time.Time
 	idleTimeout      time.Duration
-	semaphore        chan struct{}
 	vendorCB         func(v *VendorResult)
+	ouiDb            *oui.StaticDB
 	wg               *sync.WaitGroup
 	mux              sync.RWMutex
 }
@@ -59,7 +63,6 @@ func NewArpScanner(
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		requestsComplete: false,
-		semaphore:        make(chan struct{}, 1),
 		wg:               &sync.WaitGroup{},
 		mux:              sync.RWMutex{},
 	}
@@ -74,6 +77,10 @@ func NewArpScanner(
 func (s *ArpScanner) Scan() error {
 	if s.scanning {
 		return nil
+	}
+
+	if err := s.initOuiDB(); err != nil {
+		return err
 	}
 
 	// open a new handle each time so we don't hit buffer overflow error
@@ -261,34 +268,92 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 
 	if s.vendorCB != nil {
 		s.wg.Add(1)
+		defer s.wg.Done()
 
-		s.semaphore <- struct{}{} // acquire lock
+		vendor := &Vendor{Company: "Unknown"}
 
-		wrapper := func() {
-			vendor := &Vendor{Company: "Unknown"}
+		db := *s.ouiDb
 
-			url := fmt.Sprintf(
-				"https://api.maclookup.app/v2/macs/%s",
-				mac.String(),
-			)
+		entry, err := db.Query(strings.ReplaceAll(mac.String(), ":", "-"))
 
-			response, _ := http.Get(url)
-
-			json.NewDecoder(response.Body).Decode(&vendor)
-
-			if vendor.Company == "" {
-				vendor.Company = "Unknown"
-			}
-
+		if err != nil {
 			go s.vendorCB(&VendorResult{
 				MAC:    mac,
 				Vendor: vendor.Company,
 			})
 
-			<-s.semaphore // release lock
-			s.wg.Done()
+			return
 		}
 
-		time.AfterFunc(time.Second, wrapper)
+		go s.vendorCB(&VendorResult{
+			MAC:    mac,
+			Vendor: entry.Manufacturer,
+		})
 	}
+}
+
+func (s *ArpScanner) initOuiDB() error {
+	home, err := os.UserHomeDir()
+
+	if err != nil {
+		return err
+	}
+
+	dir := path.Join(home, ".config", "go-lanscan")
+	ouiTxt := path.Join(dir, "oui.txt")
+
+	_, err = os.Stat(ouiTxt)
+
+	if errors.Is(err, os.ErrNotExist) && s.vendorCB != nil && s.ouiDb == nil {
+		resp, err := http.Get("https://standards-oui.ieee.org/oui/oui.txt")
+
+		if err != nil {
+			return err
+		}
+
+		data, err := io.ReadAll(resp.Body)
+
+		if err != nil {
+			return err
+		}
+
+		if err := os.MkdirAll(dir, 0751); err != nil {
+			return err
+		}
+
+		file, err := os.OpenFile(ouiTxt, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+
+		if err != nil {
+			return err
+		}
+
+		_, err = file.Write(data)
+
+		if err != nil {
+			file.Close()
+			return err
+		}
+
+		file.Close()
+
+		db, err := oui.OpenStaticFile(ouiTxt)
+
+		if err != nil {
+			return err
+		}
+
+		s.ouiDb = &db
+
+		return nil
+	} else {
+		db, err := oui.OpenStaticFile(ouiTxt)
+
+		if err != nil {
+			return err
+		}
+
+		s.ouiDb = &db
+	}
+
+	return nil
 }
