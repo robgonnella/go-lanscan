@@ -98,7 +98,7 @@ func NewRoot() (*cobra.Command, error) {
 				targets = []string{}
 			}
 
-			runner, err := newRootRunner(
+			runner := newRootRunner(
 				targets,
 				netInfo,
 				portList,
@@ -108,10 +108,6 @@ func NewRoot() (*cobra.Command, error) {
 				printJson,
 				vendorInfo,
 			)
-
-			if err != nil {
-				return err
-			}
 
 			return runner.run()
 		},
@@ -161,10 +157,10 @@ func newRootRunner(
 	noProgress bool,
 	printJson bool,
 	vendorInfo bool,
-) (*rootRunner, error) {
+) *rootRunner {
 	scanResults := make(chan *scanner.ScanResult)
 
-	fullScanner, err := scanner.NewFullScanner(
+	fullScanner := scanner.NewFullScanner(
 		netInfo,
 		targets,
 		ports,
@@ -172,10 +168,6 @@ func newRootRunner(
 		scanResults,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 	)
-
-	if err != nil {
-		return nil, err
-	}
 
 	pw := progressWriter()
 
@@ -221,7 +213,7 @@ func newRootRunner(
 		fullScanner.SetRequestNotifications(runner.requestCallback)
 	}
 
-	return runner, nil
+	return runner
 }
 
 func (runner *rootRunner) run() error {

@@ -39,7 +39,7 @@ func main() {
 	synDone := make(chan bool)
 	listenPort := uint16(54321)
 
-	synScanner, err := scanner.NewSynScanner(
+	synScanner := scanner.NewSynScanner(
 		targets,
 		netInfo,
 		ports,
@@ -48,10 +48,6 @@ func main() {
 		synDone,
 		scanner.WithIdleTimeout(time.Second*5),
 	)
-
-	if err != nil {
-		panic(err)
-	}
 
 	go func() {
 		if err := synScanner.Scan(); err != nil {

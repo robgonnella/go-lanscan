@@ -58,7 +58,7 @@ You can provide the following options to all scanners
     fmt.Printf("syn packet sent to %s on port %s", request.IP, request.Port)
   }
 
-  synScanner, err := scanner.NewSynScanner(
+  synScanner := scanner.NewSynScanner(
     targets,
     netInfo,
     ports,
@@ -80,17 +80,13 @@ You can provide the following options to all scanners
   for this duration, a timeout occurs and the scanner is marked done
 
 ```go
-  arpScanner, err := scanner.NewArpScanner(
+  arpScanner := scanner.NewArpScanner(
     targets,
     netInfo,
     arpResults,
     arpDone,
     scanner.WithIdleTimeout(time.Second*10)
   )
-
-  if err != nil {
-    panic(err)
-  }
 
   // or
   arpScanner.SetIdleTimeout(time.Second*10)
@@ -108,17 +104,13 @@ applied to arpScanner and fullScanner.
     fmt.Printf("received vendor result: %+v\n", result)
   }
 
-  arpScanner, err := scanner.NewArpScanner(
+  arpScanner := scanner.NewArpScanner(
     targets,
     netInfo,
     arpResults,
     arpDone,
     scanner.WithVendorInfo(vendorCallback)
   )
-
-  if err != nil {
-    panic(err)
-  }
 
   // or
   option := scanner.WithVendorInfo(vendorCallback)

@@ -38,21 +38,17 @@ func NewFullScanner(
 	listenPort uint16,
 	results chan *ScanResult,
 	options ...ScannerOption,
-) (*FullScanner, error) {
+) *FullScanner {
 	internalArpResult := make(chan *ArpScanResult)
 	internalArpDone := make(chan bool)
 
-	arpScanner, err := NewArpScanner(
+	arpScanner := NewArpScanner(
 		targets,
 		netInfo,
 		internalArpResult,
 		internalArpDone,
 		options...,
 	)
-
-	if err != nil {
-		return nil, err
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -79,7 +75,7 @@ func NewFullScanner(
 		o(scanner)
 	}
 
-	return scanner, nil
+	return scanner
 }
 
 func (s *FullScanner) Scan() error {
@@ -122,7 +118,7 @@ func (s *FullScanner) Scan() error {
 				}
 			}()
 
-			synScanner, err := NewSynScanner(
+			synScanner := NewSynScanner(
 				s.devices,
 				s.netInfo,
 				s.ports,
@@ -131,10 +127,6 @@ func (s *FullScanner) Scan() error {
 				s.internalSynDone,
 				s.options...,
 			)
-
-			if err != nil {
-				return err
-			}
 
 			go func() {
 				if err := synScanner.Scan(); err != nil {

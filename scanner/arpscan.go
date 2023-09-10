@@ -45,7 +45,7 @@ func NewArpScanner(
 	resultChan chan *ArpScanResult,
 	doneChan chan bool,
 	options ...ScannerOption,
-) (*ArpScanner, error) {
+) *ArpScanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	scanner := &ArpScanner{
@@ -68,7 +68,7 @@ func NewArpScanner(
 		o(scanner)
 	}
 
-	return scanner, nil
+	return scanner
 }
 
 func (s *ArpScanner) Scan() error {

@@ -27,7 +27,7 @@ func main() {
 		fmt.Printf("vendor result: %+v\n", v)
 	}
 
-	fullScanner, err := scanner.NewFullScanner(
+	fullScanner := scanner.NewFullScanner(
 		netInfo,
 		targets,
 		ports,
@@ -35,10 +35,6 @@ func main() {
 		scanResults,
 		scanner.WithVendorInfo(vendorCB),
 	)
-
-	if err != nil {
-		panic(err)
-	}
 
 	go func() {
 		if err := fullScanner.Scan(); err != nil {

@@ -28,17 +28,13 @@ func main() {
 	arpDone := make(chan bool)
 	idleTimeout := 5
 
-	arpScanner, err := scanner.NewArpScanner(
+	arpScanner := scanner.NewArpScanner(
 		targets,
 		netInfo,
 		arpResults,
 		arpDone,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeout)),
 	)
-
-	if err != nil {
-		panic(err)
-	}
 
 	go func() {
 		if err := arpScanner.Scan(); err != nil {

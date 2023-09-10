@@ -4,6 +4,7 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -43,17 +44,7 @@ func NewSynScanner(
 	resultChan chan *SynScanResult,
 	doneChan chan bool,
 	options ...ScannerOption,
-) (*SynScanner, error) {
-	inactive, err := pcap.NewInactiveHandle(networkInfo.Interface.Name)
-
-	if err != nil {
-		return nil, err
-	}
-
-	inactive.SetPromisc(true)
-	inactive.SetSnapLen(65536)
-	inactive.SetTimeout(pcap.BlockForever)
-
+) *SynScanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	scanner := &SynScanner{
@@ -76,7 +67,7 @@ func NewSynScanner(
 		o(scanner)
 	}
 
-	return scanner, nil
+	return scanner
 }
 
 func (s *SynScanner) Scan() error {
@@ -94,6 +85,10 @@ func (s *SynScanner) Scan() error {
 	if err != nil {
 		return err
 	}
+
+	expr := fmt.Sprintf("dst port %d", s.listenPort)
+
+	handle.SetBPFFilter(expr)
 
 	s.handle = handle
 
@@ -258,6 +253,13 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 
 	defer handle.Close()
 
+	buf := gopacket.NewSerializeBuffer()
+
+	opts := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+
 	eth := layers.Ethernet{
 		SrcMAC:       s.networkInfo.Interface.HardwareAddr,
 		DstMAC:       target.MAC,
@@ -270,13 +272,6 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 		Version:  4,
 		TTL:      64,
 		Protocol: layers.IPProtocolTCP,
-	}
-
-	buf := gopacket.NewSerializeBuffer()
-
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
 	}
 
 	tcp := layers.TCP{
