@@ -168,7 +168,7 @@ func (s *FullScanner) SetIdleTimeout(d time.Duration) {
 	s.options = append(s.options, WithIdleTimeout(d))
 }
 
-func (s *FullScanner) SetVendorCB(cb func(v *VendorResult)) {
-	s.arpScanner.SetVendorCB(cb)
-	s.options = append(s.options, WithVendorInfo(cb))
+func (s *FullScanner) IncludeVendorInfo(value bool) {
+	s.arpScanner.IncludeVendorInfo(value)
+	s.options = append(s.options, WithVendorInfo(value))
 }

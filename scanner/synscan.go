@@ -134,7 +134,7 @@ func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
-func (s *SynScanner) SetVendorCB(cd func(v *VendorResult)) {
+func (s *SynScanner) IncludeVendorInfo(value bool) {
 	// nothing to do
 }
 

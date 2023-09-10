@@ -23,9 +23,6 @@ func main() {
 	ports := []string{"22", "111", "2000-4000"}
 	scanResults := make(chan *scanner.ScanResult)
 	listenPort := uint16(54321)
-	vendorCB := func(v *scanner.VendorResult) {
-		fmt.Printf("vendor result: %+v\n", v)
-	}
 
 	fullScanner := scanner.NewFullScanner(
 		netInfo,
@@ -33,7 +30,7 @@ func main() {
 		ports,
 		listenPort,
 		scanResults,
-		scanner.WithVendorInfo(vendorCB),
+		scanner.WithVendorInfo(true),
 	)
 
 	go func() {

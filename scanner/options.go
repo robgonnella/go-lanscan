@@ -18,7 +18,7 @@ func WithIdleTimeout(duration time.Duration) ScannerOption {
 	}
 }
 
-func WithVendorInfo(cb func(v *VendorResult)) ScannerOption {
+func WithVendorInfo(value bool) ScannerOption {
 	return func(s Scanner) {
 		scanner, ok := s.(*ArpScanner)
 
@@ -26,6 +26,6 @@ func WithVendorInfo(cb func(v *VendorResult)) ScannerOption {
 			return
 		}
 
-		scanner.vendorCB = cb
+		scanner.includeVendor = value
 	}
 }
