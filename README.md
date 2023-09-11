@@ -7,7 +7,16 @@ scanning on a local area network.
 
 ### Installation
 
-First install [golang], then run the following command.
+**Prerequisites**
+
+First you must install the following dependencies
+
+- [golang]
+- [libpcap]
+  - mac - `brew install libpcap`
+  - linux/debian - `sudo apt update && sudo apt install -y libpcap-dev`
+
+Then run the following command to install go-lanscan
 
 ```bash
 go install github.com/robgonnella/go-lanscan@latest
@@ -124,3 +133,4 @@ queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
 ```
 
 [golang]:  https://go.dev/doc/install
+[libpcap]: https://github.com/the-tcpdump-group/libpcap
