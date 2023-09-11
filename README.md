@@ -115,20 +115,19 @@ a static database from https://standards-oui.ieee.org/oui/oui.txt and performing
 queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
 
 ```go
-  vendorCallback := func(result *scanner.VendorResult) {
-    fmt.Printf("received vendor result: %+v\n", result)
-  }
-
   arpScanner := scanner.NewArpScanner(
     targets,
     netInfo,
     arpResults,
     arpDone,
-    scanner.WithVendorInfo(vendorCallback)
+    scanner.WithVendorInfo(true)
   )
 
   // or
-  option := scanner.WithVendorInfo(vendorCallback)
+  arpScanner.IncludeVendorInfo(true)
+
+  // or
+  option := scanner.WithVendorInfo(true)
   option(arpScanner)
 ```
 
