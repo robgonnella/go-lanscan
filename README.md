@@ -5,9 +5,7 @@ scanning on a local area network.
 
 ## Cli Usage
 
-### Installation
-
-**Prerequisites**
+### Prerequisites
 
 First you must install the following dependencies
 
@@ -16,7 +14,9 @@ First you must install the following dependencies
   - mac - `brew install libpcap`
   - linux/debian - `sudo apt update && sudo apt install -y libpcap-dev`
 
-Then run the following command to install go-lanscan
+### Installation
+
+Once dependencies are installed, run the following command to install go-lanscan
 
 ```bash
 go install github.com/robgonnella/go-lanscan@latest
@@ -56,7 +56,7 @@ sudo go-lanscan --no-progress --json
 
 ## Package Usage
 
-**Prerequisites**
+### Prerequisites
 
 First you must install the following dependencies
 
@@ -64,7 +64,7 @@ First you must install the following dependencies
   - mac - `brew install libpcap`
   - linux/debian - `sudo apt update && sudo apt install -y libpcap-dev`
 
-**Example Usage**
+### Example Usage
 
 - [arp-scanner](./examples/arpscan.go)
 - [syn-scanner](./examples/synscan.go)
