@@ -56,6 +56,16 @@ sudo go-lanscan --no-progress --json
 
 ## Package Usage
 
+**Prerequisites**
+
+First you must install the following dependencies
+
+- [libpcap]
+  - mac - `brew install libpcap`
+  - linux/debian - `sudo apt update && sudo apt install -y libpcap-dev`
+
+**Example Usage**
+
 - [arp-scanner](./examples/arpscan.go)
 - [syn-scanner](./examples/synscan.go)
 - [full-scanner](./examples/fullscan.go)
