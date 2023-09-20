@@ -172,3 +172,8 @@ func (s *FullScanner) IncludeVendorInfo(value bool) {
 	s.arpScanner.IncludeVendorInfo(value)
 	s.options = append(s.options, WithVendorInfo(value))
 }
+
+func (s *FullScanner) SetAccuracy(accuracy Accuracy) {
+	s.arpScanner.SetAccuracy(accuracy)
+	s.options = append(s.options, WithAccuracy(accuracy))
+}

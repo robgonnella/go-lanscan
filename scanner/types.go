@@ -29,6 +29,7 @@ type Scanner interface {
 	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(value bool)
+	SetAccuracy(accuracy Accuracy)
 }
 
 // Status represents possible server statues
