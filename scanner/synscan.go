@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -29,11 +28,10 @@ type SynScanner struct {
 	resultChan       chan *SynScanResult
 	doneChan         chan bool
 	notificationCB   func(a *Request)
-	lastPacketTime   time.Time
 	scanning         bool
-	requestsComplete bool
+	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
-	mux              sync.RWMutex
+	accuracy         time.Duration
 }
 
 func NewSynScanner(
@@ -56,11 +54,10 @@ func NewSynScanner(
 		listenPort:       listenPort,
 		resultChan:       resultChan,
 		doneChan:         doneChan,
-		lastPacketTime:   time.Time{},
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
-		requestsComplete: false,
-		mux:              sync.RWMutex{},
+		lastPacketSentAt: time.Time{},
+		accuracy:         time.Millisecond,
 	}
 
 	for _, o := range options {
@@ -86,9 +83,16 @@ func (s *SynScanner) Scan() error {
 		return err
 	}
 
-	expr := fmt.Sprintf("dst port %d", s.listenPort)
+	expr := fmt.Sprintf(
+		"tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-syn|tcp-ack && dst port %d",
+		s.listenPort,
+	)
 
-	handle.SetBPFFilter(expr)
+	err = handle.SetBPFFilter(expr)
+
+	if err != nil {
+		return err
+	}
 
 	s.handle = handle
 
@@ -96,8 +100,12 @@ func (s *SynScanner) Scan() error {
 
 	go s.readPackets()
 
+	limiter := time.NewTicker(s.accuracy)
+	defer limiter.Stop()
+
 	for _, target := range s.targets {
 		err := util.LoopPorts(s.ports, func(port uint16) error {
+			<-limiter.C
 			if err := s.writePacketData(target, port); err != nil {
 				return err
 			}
@@ -110,7 +118,7 @@ func (s *SynScanner) Scan() error {
 		}
 	}
 
-	s.requestsComplete = true
+	s.lastPacketSentAt = time.Now()
 
 	return nil
 }
@@ -120,9 +128,8 @@ func (s *SynScanner) Stop() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
-	s.lastPacketTime = time.Time{}
 	s.scanning = false
-	s.requestsComplete = false
+	s.lastPacketSentAt = time.Time{}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
@@ -134,14 +141,18 @@ func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
+func (s *SynScanner) SetAccuracy(accuracy Accuracy) {
+	s.accuracy = accuracy.Duration()
+}
+
 func (s *SynScanner) IncludeVendorInfo(value bool) {
 	// nothing to do
 }
 
 func (s *SynScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
-	packetSource.NoCopy = true
-	start := time.Now()
+	packetSource.DecodeOptions.NoCopy = true
+	packetSource.DecodeOptions.Lazy = true
 
 	for {
 		select {
@@ -149,19 +160,9 @@ func (s *SynScanner) readPackets() {
 			s.Stop()
 			return
 		case packet := <-packetSource.Packets():
-			s.handlePacket(packet)
+			go s.handlePacket(packet)
 		default:
-			s.mux.RLock()
-			packetTime := s.lastPacketTime
-			s.mux.RUnlock()
-
-			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
-				s.Stop()
-				s.doneChan <- true
-				return
-			}
-
-			if s.requestsComplete && packetTime.IsZero() && time.Since(start) >= s.idleTimeout {
+			if !s.lastPacketSentAt.IsZero() && time.Since(s.lastPacketSentAt) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
 				return
@@ -208,10 +209,6 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 		return
 	}
 
-	s.mux.Lock()
-	s.lastPacketTime = time.Now()
-	s.mux.Unlock()
-
 	if tcp.SYN && tcp.ACK {
 		serviceName := ""
 
@@ -239,20 +236,6 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 }
 
 func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
-	// open a new handle each time so we don't hit a buffer overflow error
-	handle, err := pcap.OpenLive(
-		s.networkInfo.Interface.Name,
-		65536,
-		true,
-		pcap.BlockForever,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	defer handle.Close()
-
 	buf := gopacket.NewSerializeBuffer()
 
 	opts := gopacket.SerializeOptions{
@@ -286,7 +269,7 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 		return err
 	}
 
-	if err := handle.WritePacketData(buf.Bytes()); err != nil {
+	if err := s.handle.WritePacketData(buf.Bytes()); err != nil {
 		return err
 	}
 

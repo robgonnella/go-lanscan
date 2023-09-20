@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -34,12 +33,11 @@ type ArpScanner struct {
 	doneChan         chan bool
 	notificationCB   func(a *Request)
 	scanning         bool
-	requestsComplete bool
-	lastPacketTime   time.Time
+	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
 	includeVendor    bool
+	accuracy         time.Duration
 	ouiDb            *oui.StaticDB
-	mux              sync.RWMutex
 }
 
 func NewArpScanner(
@@ -58,12 +56,11 @@ func NewArpScanner(
 		networkInfo:      networkInfo,
 		resultChan:       resultChan,
 		doneChan:         doneChan,
-		lastPacketTime:   time.Time{},
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
-		requestsComplete: false,
+		lastPacketSentAt: time.Time{},
 		includeVendor:    false,
-		mux:              sync.RWMutex{},
+		accuracy:         time.Millisecond,
 	}
 
 	for _, o := range options {
@@ -100,13 +97,22 @@ func (s *ArpScanner) Scan() error {
 
 	go s.readPackets()
 
+	limiter := time.NewTicker(s.accuracy)
+	defer limiter.Stop()
+
 	if len(s.targets) == 0 {
-		err = util.LoopNetIPHosts(s.networkInfo.IPNet, s.writePacketData)
+		err = util.LoopNetIPHosts(s.networkInfo.IPNet, func(ip net.IP) error {
+			<-limiter.C
+			return s.writePacketData(ip)
+		})
 	} else {
-		err = util.LoopTargets(s.targets, s.writePacketData)
+		err = util.LoopTargets(s.targets, func(ip net.IP) error {
+			<-limiter.C
+			return s.writePacketData(ip)
+		})
 	}
 
-	s.requestsComplete = true
+	s.lastPacketSentAt = time.Now()
 
 	return err
 }
@@ -116,9 +122,8 @@ func (s *ArpScanner) Stop() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
-	s.lastPacketTime = time.Time{}
 	s.scanning = false
-	s.requestsComplete = false
+	s.lastPacketSentAt = time.Time{}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
@@ -134,10 +139,14 @@ func (s *ArpScanner) IncludeVendorInfo(value bool) {
 	s.includeVendor = value
 }
 
+func (s *ArpScanner) SetAccuracy(accuracy Accuracy) {
+	s.accuracy = accuracy.Duration()
+}
+
 func (s *ArpScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
-	packetSource.NoCopy = true
-	start := time.Now()
+	packetSource.DecodeOptions.NoCopy = true
+	packetSource.DecodeOptions.Lazy = true
 
 	for {
 		select {
@@ -148,20 +157,10 @@ func (s *ArpScanner) readPackets() {
 			arpLayer := packet.Layer(layers.LayerTypeARP)
 
 			if arpLayer != nil {
-				s.handleARPLayer(arpLayer.(*layers.ARP))
+				go s.handleARPLayer(arpLayer.(*layers.ARP))
 			}
 		default:
-			s.mux.RLock()
-			packetTime := s.lastPacketTime
-			s.mux.RUnlock()
-
-			if s.requestsComplete && !packetTime.IsZero() && time.Since(packetTime) >= s.idleTimeout {
-				s.Stop()
-				s.doneChan <- true
-				return
-			}
-
-			if s.requestsComplete && packetTime.IsZero() && time.Since(start) >= s.idleTimeout {
+			if !s.lastPacketSentAt.IsZero() && time.Since(s.lastPacketSentAt) >= s.idleTimeout {
 				s.Stop()
 				s.doneChan <- true
 				return
@@ -196,28 +195,10 @@ func (s *ArpScanner) handleARPLayer(arp *layers.ARP) {
 		}
 	}
 
-	s.mux.Lock()
-	s.lastPacketTime = time.Now()
-	s.mux.Unlock()
-
 	go s.processResult(ip, mac)
 }
 
 func (s *ArpScanner) writePacketData(ip net.IP) error {
-	// open a new handle each time so we don't hit buffer overflow error
-	handle, err := pcap.OpenLive(
-		s.networkInfo.Interface.Name,
-		65536,
-		true,
-		pcap.BlockForever,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	defer handle.Close()
-
 	eth := layers.Ethernet{
 		SrcMAC:       s.networkInfo.Interface.HardwareAddr,
 		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
@@ -247,7 +228,7 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 		return err
 	}
 
-	if err := handle.WritePacketData(buf.Bytes()); err != nil {
+	if err := s.handle.WritePacketData(buf.Bytes()); err != nil {
 		return err
 	}
 

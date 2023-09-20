@@ -72,6 +72,7 @@ func NewRoot() (*cobra.Command, error) {
 	var ifaceName string
 	var targets []string
 	var vendorInfo bool
+	var accuracy string
 
 	netInfo, err := network.GetNetworkInfo()
 
@@ -99,6 +100,7 @@ func NewRoot() (*cobra.Command, error) {
 			}
 
 			runner := newRootRunner(
+				accuracy,
 				targets,
 				netInfo,
 				portList,
@@ -120,6 +122,7 @@ func NewRoot() (*cobra.Command, error) {
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
 	cmd.Flags().StringVarP(&ifaceName, "interface", "i", netInfo.Interface.Name, "set the interface for scanning")
 	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{netInfo.Cidr}, "set targets for scanning")
+	cmd.Flags().StringVar(&accuracy, "accuracy", "high", "sets throttle to ensure fewer packets are dropped. Valid values are high (slower more accurate), medium, low (faster less accurate)")
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 
 	cmd.AddCommand(newVersion())
@@ -149,6 +152,7 @@ type rootRunner struct {
 }
 
 func newRootRunner(
+	accuracy string,
 	targets []string,
 	netInfo *network.NetworkInfo,
 	ports []string,
@@ -158,6 +162,19 @@ func newRootRunner(
 	printJson bool,
 	vendorInfo bool,
 ) *rootRunner {
+	var scannerAccuracy scanner.Accuracy
+
+	switch strings.ToLower(accuracy) {
+	case "low":
+		scannerAccuracy = scanner.LOW_ACCURACY
+	case "medium":
+		scannerAccuracy = scanner.MEDIUM_ACCURACY
+	case "high":
+		scannerAccuracy = scanner.HIGH_ACCURACY
+	default:
+		scannerAccuracy = scanner.HIGH_ACCURACY
+	}
+
 	scanResults := make(chan *scanner.ScanResult)
 
 	fullScanner := scanner.NewFullScanner(
@@ -168,6 +185,7 @@ func newRootRunner(
 		scanResults,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 		scanner.WithVendorInfo(vendorInfo),
+		scanner.WithAccuracy(scannerAccuracy),
 	)
 
 	pw := progressWriter()
