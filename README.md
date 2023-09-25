@@ -52,6 +52,10 @@ sudo go-lanscan --no-progress
 
 # only output final result in json
 sudo go-lanscan --no-progress --json
+
+# set accuracy to low, which results in a faster scan but may
+# miss some open ports
+sudo go-lanscan --accuracy low
 ```
 
 ## Package Usage
@@ -119,7 +123,7 @@ You can provide the following options to all scanners
   option(arpScanner)
 ```
 
-The next option performs vendor look-ups for mac addresses and can only be
+- The next option performs vendor look-ups for mac addresses and can only be
 applied to arpScanner and fullScanner. Vendor lookup is performed by downloading
 a static database from https://standards-oui.ieee.org/oui/oui.txt and performing
 queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
@@ -140,6 +144,30 @@ queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
   option := scanner.WithVendorInfo(true)
   option(arpScanner)
 ```
+
+- Set accuracy of scanning (LOW, MEDIUM, HIGH). Low results in a faster scan
+  but may miss some open ports. The default is HIGH. This option can be set
+  on any scanner
+
+```go
+  synScanner := scanner.NewSynScanner(
+    targets,
+    netInfo,
+    ports,
+    listenPort,
+    synResults,
+    synDone,
+    scanner.WithAccuracy(scanner.LOW_ACCURACY),
+  )
+
+  // or
+  synScanner.SetAccuracy(scanner.LOW_ACCURACY)
+
+  // or
+  option := scanner.WithAccuracy(scanner.LOW_ACCURACY)
+  option(synScanner)
+```
+
 
 [golang]:  https://go.dev/doc/install
 [libpcap]: https://github.com/the-tcpdump-group/libpcap

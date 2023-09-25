@@ -105,6 +105,8 @@ func (s *SynScanner) Scan() error {
 
 	for _, target := range s.targets {
 		err := util.LoopPorts(s.ports, func(port uint16) error {
+			// throttle calls to writePacketData to improve accuracy of results
+			// the longer the time between calls the greater the accuracy.
 			<-limiter.C
 			if err := s.writePacketData(target, port); err != nil {
 				return err

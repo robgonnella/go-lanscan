@@ -102,11 +102,15 @@ func (s *ArpScanner) Scan() error {
 
 	if len(s.targets) == 0 {
 		err = util.LoopNetIPHosts(s.networkInfo.IPNet, func(ip net.IP) error {
+			// throttle calls to writePacketData to improve accuracy of results
+			// the longer the time between calls the greater the accuracy.
 			<-limiter.C
 			return s.writePacketData(ip)
 		})
 	} else {
 		err = util.LoopTargets(s.targets, func(ip net.IP) error {
+			// throttle calls to writePacketData to improve accuracy of results
+			// the longer the time between calls the greater the accuracy.
 			<-limiter.C
 			return s.writePacketData(ip)
 		})
