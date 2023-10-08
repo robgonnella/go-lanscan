@@ -76,7 +76,7 @@ func (s *SynScanner) Scan() error {
 		s.networkInfo.Interface.Name,
 		65536,
 		true,
-		pcap.BlockForever,
+		s.idleTimeout,
 	)
 
 	if err != nil {

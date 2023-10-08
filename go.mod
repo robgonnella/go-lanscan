@@ -1,6 +1,6 @@
 module github.com/robgonnella/go-lanscan
 
-go 1.20
+go 1.21
 
 require (
 	github.com/golang/mock v1.6.0
@@ -8,10 +8,10 @@ require (
 	github.com/jackpal/gateway v1.0.10
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/klauspost/oui v0.0.0-20150225163751-35b4deb627f8
-	github.com/rs/zerolog v1.30.0
+	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.7.0
 	github.com/thediveo/netdb v1.0.2
-	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
 
 require (
@@ -28,6 +28,6 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
-	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/net v0.16.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 )
