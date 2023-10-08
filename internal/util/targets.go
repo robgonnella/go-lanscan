@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/robgonnella/go-lanscan/network"
+	"github.com/robgonnella/go-lanscan/pkg/network"
 )
 
 var cidrSuffix = regexp.MustCompile(`\/\d{1,2}$`)

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package command
+package cli
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -18,10 +19,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
-	"github.com/robgonnella/go-lanscan/logger"
-	"github.com/robgonnella/go-lanscan/network"
-	"github.com/robgonnella/go-lanscan/scanner"
-	"github.com/robgonnella/go-lanscan/util"
+	"github.com/robgonnella/go-lanscan/internal/logger"
+	"github.com/robgonnella/go-lanscan/internal/util"
+	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/scanner"
 )
 
 type DeviceResult struct {
@@ -85,6 +86,23 @@ func NewRoot() (*cobra.Command, error) {
 		Short: "Scan your LAN!",
 		Long:  `CLI to scan your Local Area Network`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log := logger.New()
+
+			ouiTxt, err := util.GetDefaultOuiTxtPath()
+
+			if err != nil {
+				return err
+			}
+
+			if _, err := os.Stat(*ouiTxt); errors.Is(err, os.ErrNotExist) {
+				log.Info().
+					Str("file", *ouiTxt).
+					Msg("updating vendor database")
+				if err := util.UpdateStaticVendors(*ouiTxt); err != nil {
+					return err
+				}
+			}
+
 			portList := strings.Split(ports, ",")
 
 			if ifaceName != netInfo.Interface.Name {

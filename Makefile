@@ -1,6 +1,7 @@
 #### Vars ####
 
 platform = $(shell uname -s)
+arch = $(shell uname -m)
 
 prefix = $(shell pwd)/build
 
@@ -16,39 +17,21 @@ flags = -ldflags '-s -w'
 component = $(app_name)_$(tag)
 component_path = $(prefix)/$(component)
 
-linux_objects = $(component_path)_linux_amd64 \
-$(component_path)_linux_arm_5 \
-$(component_path)_linux_arm_6 \
-$(component_path)_linux_arm_7 \
-$(component_path)_linux_arm64
-
-darwin_object = $(component_path)_darwin_amd64 \
-$(component_path)_darwin_arm64
+linux_objects = $(component_path)_linux_$(arch)
+darwin_objects = $(component_path)_darwin_$(arch)
 
 #### Gather Objects ####
 
 ifeq ($(platform),Linux)
 objects := $(linux_objects)
-else
-objects := $(darwin_object)
+endif
+
+ifeq ($(platform),Darwin)
+objects := $(darwin_objects)
 endif
 
 #### Zip File Objects ####
 $(foreach o,$(objects), $(eval zips += $(o).zip))
-
-#### Helper Functions ####
-
-define get_goos
-$(word 3, $(subst _, ,$1))
-endef
-
-define get_goarch
-$(word 4, $(subst _, ,$1))
-endef
-
-define get_goarm
-$(word 5, $(subst _, ,$1))
-endef
 
 #### Rules Section ####
 
@@ -71,10 +54,7 @@ install:
 
 # cross compiles binaries for linux and darwin
 $(objects): $(go_deps)
-	$(eval goos=$(call get_goos, $(@)))
-	$(eval goarch=$(call get_goarch, $(@)))
-	$(eval goarm=$(call get_goarm, $(@)))
-	GOOS=$(goos) GOARCH=$(goarch) GOARM=$(goarm) go build $(flags) -o $(@)
+	go build $(flags) -o $(@)
 
 # creates zips of pre-built binaries
 $(zips): $(objects)
@@ -84,14 +64,8 @@ $(zips): $(objects)
 .PHONY: release
 release: $(zips)
 
-# run tests
-.PHONY: test
-test:
-	go test -v -race ./...
-
-# generate mocks
-.PHONY: mock
-mock:
+.PHONY: gen
+gen:
 	go generate ./...
 
 # remove buid directory and installed executable

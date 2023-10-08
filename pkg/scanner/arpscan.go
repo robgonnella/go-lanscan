@@ -19,8 +19,8 @@ import (
 	"github.com/google/gopacket/pcap"
 	"github.com/klauspost/oui"
 
-	"github.com/robgonnella/go-lanscan/network"
-	"github.com/robgonnella/go-lanscan/util"
+	"github.com/robgonnella/go-lanscan/internal/util"
+	"github.com/robgonnella/go-lanscan/pkg/network"
 )
 
 type ArpScanner struct {

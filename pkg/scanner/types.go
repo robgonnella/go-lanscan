@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-//go:generate mockgen -destination=../mock/scanner/scanner.go -package=mock_scanner . Scanner
-
 type RequestType string
 
 const (
