@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//go:generate go run internal/scripts/gen-version.go
 
 package main
 

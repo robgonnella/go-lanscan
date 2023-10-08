@@ -64,10 +64,6 @@ $(zips): $(objects)
 .PHONY: release
 release: $(zips)
 
-.PHONY: gen
-gen:
-	go generate ./...
-
 # remove buid directory and installed executable
 .PHONY: clean
 clean:

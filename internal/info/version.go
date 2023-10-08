@@ -1,3 +1,3 @@
 package info
 
-var VERSION = "v1.7.0"
+var VERSION = "v1.8.3"
