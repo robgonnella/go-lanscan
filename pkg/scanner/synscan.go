@@ -13,8 +13,8 @@ import (
 	"github.com/google/gopacket/pcap"
 	"github.com/thediveo/netdb"
 
-	"github.com/robgonnella/go-lanscan/network"
-	"github.com/robgonnella/go-lanscan/util"
+	"github.com/robgonnella/go-lanscan/internal/util"
+	"github.com/robgonnella/go-lanscan/pkg/network"
 )
 
 type SynScanner struct {

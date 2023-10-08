@@ -6,8 +6,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/robgonnella/go-lanscan/network"
-	"github.com/robgonnella/go-lanscan/scanner"
+	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/scanner"
 )
 
 func main() {
