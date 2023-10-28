@@ -25,8 +25,7 @@ type SynScanner struct {
 	ports            []string
 	listenPort       uint16
 	handle           *pcap.Handle
-	resultChan       chan *SynScanResult
-	doneChan         chan bool
+	resultChan       chan *ScanResult
 	notificationCB   func(a *Request)
 	scanning         bool
 	lastPacketSentAt time.Time
@@ -39,8 +38,7 @@ func NewSynScanner(
 	networkInfo *network.NetworkInfo,
 	ports []string,
 	listenPort uint16,
-	resultChan chan *SynScanResult,
-	doneChan chan bool,
+	resultChan chan *ScanResult,
 	options ...ScannerOption,
 ) *SynScanner {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -53,7 +51,6 @@ func NewSynScanner(
 		ports:            ports,
 		listenPort:       listenPort,
 		resultChan:       resultChan,
-		doneChan:         doneChan,
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
@@ -166,7 +163,9 @@ func (s *SynScanner) readPackets() {
 		default:
 			if !s.lastPacketSentAt.IsZero() && time.Since(s.lastPacketSentAt) >= s.idleTimeout {
 				s.Stop()
-				s.doneChan <- true
+				s.resultChan <- &ScanResult{
+					Type: SYNDone,
+				}
 				return
 			}
 		}
@@ -232,7 +231,10 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 		}
 
 		go func(r *SynScanResult) {
-			s.resultChan <- r
+			s.resultChan <- &ScanResult{
+				Type:    SYNResult,
+				Payload: r,
+			}
 		}(result)
 	}
 }

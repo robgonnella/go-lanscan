@@ -53,6 +53,9 @@ sudo go-lanscan --no-progress
 # only output final result in json
 sudo go-lanscan --no-progress --json
 
+# run only arp scanning (skip syn scanning)
+sudo go-lanscan --arp-only
+
 # set accuracy to low, which results in a faster scan but may
 # miss some open ports
 sudo go-lanscan --accuracy low

@@ -24,15 +24,13 @@ func main() {
 	// to the targets list it will ignore the interface cidr and only scan
 	// the specified targets.
 	targets := []string{}
-	arpResults := make(chan *scanner.ArpScanResult)
-	arpDone := make(chan bool)
+	results := make(chan *scanner.ScanResult)
 	idleTimeout := 5
 
 	arpScanner := scanner.NewArpScanner(
 		targets,
 		netInfo,
-		arpResults,
-		arpDone,
+		results,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeout)),
 	)
 
@@ -42,11 +40,11 @@ func main() {
 		}
 	}()
 
-	for {
-		select {
-		case result := <-arpResults:
-			fmt.Printf("arp scan result: %+v\n", result)
-		case <-arpDone:
+	for result := range results {
+		switch result.Type {
+		case scanner.ARPResult:
+			fmt.Printf("arp scan result: %+v\n", result.Payload.(*scanner.ArpScanResult))
+		case scanner.ARPDone:
 			fmt.Println("arp scanning complete")
 			return
 		}

@@ -25,6 +25,7 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 	var targets []string
 	var vendorInfo bool
 	var accuracy string
+	var arpOnly bool
 
 	netInfo, err := network.GetNetworkInfo()
 
@@ -78,6 +79,7 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 				noProgress,
 				printJson,
 				vendorInfo,
+				arpOnly,
 			)
 
 			return runner.Run()
@@ -85,6 +87,7 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 	}
 
 	cmd.Flags().BoolVar(&printJson, "json", false, "output json instead of table text")
+	cmd.Flags().BoolVar(&arpOnly, "arp-only", false, "only perform arp scanning (skip syn scanning)")
 	cmd.Flags().BoolVar(&noProgress, "no-progress", false, "disable all output except for final results")
 	cmd.Flags().StringVarP(&ports, "ports", "p", "1-65535", "target ports")
 	cmd.Flags().IntVar(&idleTimeoutSeconds, "idle-timeout", 5, "timeout when no expected packets are received for this duration")

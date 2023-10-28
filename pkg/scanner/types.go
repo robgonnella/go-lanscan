@@ -74,6 +74,18 @@ type ArpScanResult struct {
 	Vendor string
 }
 
+func (r *ArpScanResult) Serializable() interface{} {
+	return struct {
+		IP     string `json:"ip"`
+		MAC    string `json:"mac"`
+		Vendor string `json:"vendor"`
+	}{
+		IP:     r.IP.String(),
+		MAC:    r.MAC.String(),
+		Vendor: r.Vendor,
+	}
+}
+
 type ResultType string
 
 const (
@@ -86,16 +98,4 @@ const (
 type ScanResult struct {
 	Type    ResultType
 	Payload any
-}
-
-func (r *ArpScanResult) Serializable() interface{} {
-	return struct {
-		IP     string `json:"ip"`
-		MAC    string `json:"mac"`
-		Vendor string `json:"vendor"`
-	}{
-		IP:     r.IP.String(),
-		MAC:    r.MAC.String(),
-		Vendor: r.Vendor,
-	}
 }

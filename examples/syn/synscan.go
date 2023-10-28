@@ -35,8 +35,7 @@ func main() {
 	}
 
 	ports := []string{"22", "111", "2000-4000"}
-	synResults := make(chan *scanner.SynScanResult)
-	synDone := make(chan bool)
+	results := make(chan *scanner.ScanResult)
 	listenPort := uint16(54321)
 
 	synScanner := scanner.NewSynScanner(
@@ -44,8 +43,7 @@ func main() {
 		netInfo,
 		ports,
 		listenPort,
-		synResults,
-		synDone,
+		results,
 		scanner.WithIdleTimeout(time.Second*5),
 	)
 
@@ -55,11 +53,11 @@ func main() {
 		}
 	}()
 
-	for {
-		select {
-		case result := <-synResults:
-			fmt.Printf("syn scan result: %+v\n", result)
-		case <-synDone:
+	for result := range results {
+		switch result.Type {
+		case scanner.SYNResult:
+			fmt.Printf("syn scan result: %+v\n", result.Payload.(*scanner.SynScanResult))
+		case scanner.SYNDone:
 			fmt.Println("syn scanning complete")
 			return
 		}

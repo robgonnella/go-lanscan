@@ -61,6 +61,7 @@ func (r *Results) MarshalJSON() ([]byte, error) {
 
 type Core struct {
 	idleTimeoutSeconds int
+	arpOnly            bool
 	printJson          bool
 	noProgress         bool
 	targets            []string
@@ -93,6 +94,7 @@ func (c *Core) Initialize(
 	noProgress bool,
 	printJson bool,
 	vendorInfo bool,
+	arpOnly bool,
 ) {
 	var scannerAccuracy scanner.Accuracy
 
@@ -109,16 +111,29 @@ func (c *Core) Initialize(
 
 	scanResults := make(chan *scanner.ScanResult)
 
-	fullScanner := scanner.NewFullScanner(
-		netInfo,
-		targets,
-		ports,
-		listenPort,
-		scanResults,
-		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-		scanner.WithVendorInfo(vendorInfo),
-		scanner.WithAccuracy(scannerAccuracy),
-	)
+	var coreScanner scanner.Scanner
+
+	if arpOnly {
+		coreScanner = scanner.NewArpScanner(
+			targets,
+			netInfo,
+			scanResults,
+			scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
+			scanner.WithVendorInfo(vendorInfo),
+			scanner.WithAccuracy(scannerAccuracy),
+		)
+	} else {
+		coreScanner = scanner.NewFullScanner(
+			netInfo,
+			targets,
+			ports,
+			listenPort,
+			scanResults,
+			scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
+			scanner.WithVendorInfo(vendorInfo),
+			scanner.WithAccuracy(scannerAccuracy),
+		)
+	}
 
 	pw := progressWriter()
 
@@ -133,6 +148,7 @@ func (c *Core) Initialize(
 	c.listenPort = listenPort
 	c.idleTimeoutSeconds = idleTimeoutSeconds
 	c.noProgress = noProgress
+	c.arpOnly = arpOnly
 	c.printJson = printJson
 	c.results = results
 	c.pw = pw
@@ -141,7 +157,7 @@ func (c *Core) Initialize(
 	c.arpTracker = tracker(pw, "starting arp scan", true)
 	c.synTracker = tracker(pw, "starting syn scan", false)
 	c.scanResults = scanResults
-	c.scanner = fullScanner
+	c.scanner = coreScanner
 	c.errorChan = make(chan error)
 	c.log = logger.New()
 
@@ -154,7 +170,7 @@ func (c *Core) Initialize(
 	if noProgress {
 		logger.SetGlobalLevel(zerolog.Disabled)
 	} else {
-		fullScanner.SetRequestNotifications(c.requestCallback)
+		coreScanner.SetRequestNotifications(c.requestCallback)
 	}
 }
 
@@ -172,6 +188,7 @@ func (c *Core) Run() error {
 		}
 	}()
 
+OUTER:
 	for {
 		select {
 		case err := <-c.errorChan:
@@ -182,14 +199,24 @@ func (c *Core) Run() error {
 				go c.processArpResult(res.Payload.(*scanner.ArpScanResult))
 			case scanner.ARPDone:
 				go c.processArpDone()
+				if c.arpOnly {
+					c.printArpResults()
+					break OUTER
+				}
 			case scanner.SYNResult:
 				go c.processSynResult(res.Payload.(*scanner.SynScanResult))
 			case scanner.SYNDone:
-				c.processSynDone(start)
-				return nil
+				c.processSynDone()
+				break OUTER
 			}
 		}
 	}
+
+	c.scanner.Stop()
+
+	c.log.Info().Str("duration", time.Since(start).String()).Msg("go-lanscan complete")
+
+	return nil
 }
 
 func (c *Core) processSynResult(result *scanner.SynScanResult) {
@@ -229,14 +256,11 @@ func (c *Core) processSynResult(result *scanner.SynScanResult) {
 	}
 }
 
-func (c *Core) processSynDone(start time.Time) {
+func (c *Core) processSynDone() {
 	c.results.DeviceMux.Lock()
 	defer c.results.DeviceMux.Unlock()
 
-	c.scanner.Stop()
 	c.printSynResults()
-
-	c.log.Info().Str("duration", time.Since(start).String()).Msg("go-lanscan complete")
 }
 
 func (c *Core) processArpResult(result *scanner.ArpScanResult) {
@@ -263,13 +287,17 @@ func (c *Core) processArpResult(result *scanner.ArpScanResult) {
 }
 
 func (c *Core) processArpDone() {
+	if c.arpOnly {
+		return
+	}
+
 	c.results.DeviceMux.Lock()
 	defer c.results.DeviceMux.Unlock()
 
 	if !c.noProgress {
 		c.printArpResults()
 
-		if len(c.results.Devices) > 0 {
+		if !c.arpOnly && len(c.results.Devices) > 0 {
 			c.synTracker.Total = int64(
 				len(c.results.Devices) * util.PortTotal(c.ports),
 			)
@@ -277,7 +305,7 @@ func (c *Core) processArpDone() {
 		}
 	}
 
-	if len(c.results.Devices) == 0 {
+	if !c.arpOnly && len(c.results.Devices) == 0 {
 		go func() {
 			c.scanResults <- &scanner.ScanResult{
 				Type: scanner.SYNDone,

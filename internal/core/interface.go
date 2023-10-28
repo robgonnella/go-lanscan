@@ -15,6 +15,7 @@ type Runner interface {
 		noProgress bool,
 		printJson bool,
 		vendorInfo bool,
+		arpOnly bool,
 	)
 	Run() error
 }

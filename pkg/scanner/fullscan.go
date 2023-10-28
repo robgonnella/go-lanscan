@@ -5,6 +5,7 @@ package scanner
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
@@ -13,22 +14,19 @@ import (
 )
 
 type FullScanner struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	targets           []string
-	ports             []string
-	listenPort        uint16
-	netInfo           *network.NetworkInfo
-	options           []ScannerOption
-	devices           []*ArpScanResult
-	arpScanner        *ArpScanner
-	internalArpResult chan *ArpScanResult
-	internalArpDone   chan bool
-	synScanner        *SynScanner
-	internalSynResult chan *SynScanResult
-	internalSynDone   chan bool
-	consumerResults   chan *ScanResult
-	errorChan         chan error
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	targets             []string
+	ports               []string
+	listenPort          uint16
+	netInfo             *network.NetworkInfo
+	options             []ScannerOption
+	devices             []*ArpScanResult
+	arpScanner          *ArpScanner
+	synScanner          *SynScanner
+	internalScanResults chan *ScanResult
+	consumerResults     chan *ScanResult
+	errorChan           chan error
 }
 
 func NewFullScanner(
@@ -39,36 +37,31 @@ func NewFullScanner(
 	results chan *ScanResult,
 	options ...ScannerOption,
 ) *FullScanner {
-	internalArpResult := make(chan *ArpScanResult)
-	internalArpDone := make(chan bool)
+	internalScanResults := make(chan *ScanResult)
 
 	arpScanner := NewArpScanner(
 		targets,
 		netInfo,
-		internalArpResult,
-		internalArpDone,
+		internalScanResults,
 		options...,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	scanner := &FullScanner{
-		ctx:               ctx,
-		cancel:            cancel,
-		netInfo:           netInfo,
-		targets:           targets,
-		listenPort:        listenPort,
-		ports:             ports,
-		devices:           []*ArpScanResult{},
-		consumerResults:   results,
-		arpScanner:        arpScanner,
-		internalArpResult: internalArpResult,
-		internalArpDone:   internalArpDone,
-		synScanner:        nil,
-		internalSynResult: make(chan *SynScanResult),
-		internalSynDone:   make(chan bool),
-		errorChan:         make(chan error),
-		options:           options,
+		ctx:                 ctx,
+		cancel:              cancel,
+		netInfo:             netInfo,
+		targets:             targets,
+		listenPort:          listenPort,
+		ports:               ports,
+		devices:             []*ArpScanResult{},
+		consumerResults:     results,
+		arpScanner:          arpScanner,
+		synScanner:          nil,
+		internalScanResults: internalScanResults,
+		errorChan:           make(chan error),
+		options:             options,
 	}
 
 	for _, o := range options {
@@ -91,62 +84,24 @@ func (s *FullScanner) Scan() error {
 		select {
 		case <-s.ctx.Done():
 			return s.ctx.Err()
-		case r := <-s.internalArpResult:
-			go func() {
-				s.consumerResults <- &ScanResult{
-					Type:    ARPResult,
-					Payload: r,
-				}
-			}()
-
-			if !util.SliceIncludesFunc(s.devices, func(d *ArpScanResult, i int) bool {
-				return d.IP.Equal(r.IP)
-			}) {
-				s.devices = append(s.devices, &ArpScanResult{
-					IP:  r.IP,
-					MAC: r.MAC,
-				})
-
-				slices.SortFunc(s.devices, func(d1, d2 *ArpScanResult) int {
-					return bytes.Compare(d1.IP, d2.IP)
-				})
+		case r := <-s.internalScanResults:
+			switch r.Type {
+			case ARPResult:
+				s.handleArpResult(r.Payload.(*ArpScanResult))
+			case ARPDone:
+				s.handleArpDone()
+			case SYNResult:
+				go func() {
+					s.consumerResults <- r
+				}()
+			case SYNDone:
+				go func() {
+					s.consumerResults <- r
+				}()
+				return nil
+			default:
+				return fmt.Errorf("unknown result type: %s", r.Type)
 			}
-		case <-s.internalArpDone:
-			go func() {
-				s.consumerResults <- &ScanResult{
-					Type: ARPDone,
-				}
-			}()
-
-			synScanner := NewSynScanner(
-				s.devices,
-				s.netInfo,
-				s.ports,
-				s.listenPort,
-				s.internalSynResult,
-				s.internalSynDone,
-				s.options...,
-			)
-
-			go func() {
-				if err := synScanner.Scan(); err != nil {
-					s.errorChan <- err
-				}
-			}()
-		case r := <-s.internalSynResult:
-			go func() {
-				s.consumerResults <- &ScanResult{
-					Type:    SYNResult,
-					Payload: r,
-				}
-			}()
-		case <-s.internalSynDone:
-			go func() {
-				s.consumerResults <- &ScanResult{
-					Type: SYNDone,
-				}
-			}()
-			return nil
 		case err := <-s.errorChan:
 			return err
 		}
@@ -176,4 +131,50 @@ func (s *FullScanner) IncludeVendorInfo(value bool) {
 func (s *FullScanner) SetAccuracy(accuracy Accuracy) {
 	s.arpScanner.SetAccuracy(accuracy)
 	s.options = append(s.options, WithAccuracy(accuracy))
+}
+
+func (s *FullScanner) handleArpDone() {
+	go func() {
+		s.consumerResults <- &ScanResult{
+			Type: ARPDone,
+		}
+	}()
+
+	synScanner := NewSynScanner(
+		s.devices,
+		s.netInfo,
+		s.ports,
+		s.listenPort,
+		s.internalScanResults,
+		s.options...,
+	)
+
+	go func() {
+		if err := synScanner.Scan(); err != nil {
+			s.errorChan <- err
+		}
+	}()
+}
+
+func (s *FullScanner) handleArpResult(result *ArpScanResult) {
+	go func() {
+		s.consumerResults <- &ScanResult{
+			Type:    ARPResult,
+			Payload: result,
+		}
+	}()
+
+	if !util.SliceIncludesFunc(s.devices, func(d *ArpScanResult, i int) bool {
+		return d.IP.Equal(result.IP)
+	}) {
+		s.devices = append(s.devices, &ArpScanResult{
+			IP:  result.IP,
+			MAC: result.MAC,
+		})
+
+		slices.SortFunc(s.devices, func(d1, d2 *ArpScanResult) int {
+			return bytes.Compare(d1.IP, d2.IP)
+		})
+	}
+
 }

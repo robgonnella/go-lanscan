@@ -39,20 +39,17 @@ func main() {
 		}
 	}()
 
-	for {
-		select {
-		case res := <-scanResults:
-			switch res.Type {
-			case scanner.ARPResult:
-				fmt.Printf("arp scan result: %+v\n", res.Payload)
-			case scanner.ARPDone:
-				fmt.Println("arp scanning complete")
-			case scanner.SYNResult:
-				fmt.Printf("syn scan result: %+v\n", res.Payload)
-			case scanner.SYNDone:
-				fmt.Println("syn scanning complete")
-				return
-			}
+	for res := range scanResults {
+		switch res.Type {
+		case scanner.ARPResult:
+			fmt.Printf("arp scan result: %+v\n", res.Payload.(*scanner.ArpScanResult))
+		case scanner.ARPDone:
+			fmt.Println("arp scanning complete")
+		case scanner.SYNResult:
+			fmt.Printf("syn scan result: %+v\n", res.Payload.(*scanner.SynScanResult))
+		case scanner.SYNDone:
+			fmt.Println("syn scanning complete")
+			return
 		}
 	}
 }

@@ -29,8 +29,7 @@ type ArpScanner struct {
 	targets          []string
 	networkInfo      *network.NetworkInfo
 	handle           *pcap.Handle
-	resultChan       chan *ArpScanResult
-	doneChan         chan bool
+	resultChan       chan *ScanResult
 	notificationCB   func(a *Request)
 	scanning         bool
 	lastPacketSentAt time.Time
@@ -43,8 +42,7 @@ type ArpScanner struct {
 func NewArpScanner(
 	targets []string,
 	networkInfo *network.NetworkInfo,
-	resultChan chan *ArpScanResult,
-	doneChan chan bool,
+	resultChan chan *ScanResult,
 	options ...ScannerOption,
 ) *ArpScanner {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,7 +53,6 @@ func NewArpScanner(
 		targets:          targets,
 		networkInfo:      networkInfo,
 		resultChan:       resultChan,
-		doneChan:         doneChan,
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
@@ -166,7 +163,9 @@ func (s *ArpScanner) readPackets() {
 		default:
 			if !s.lastPacketSentAt.IsZero() && time.Since(s.lastPacketSentAt) >= s.idleTimeout {
 				s.Stop()
-				s.doneChan <- true
+				s.resultChan <- &ScanResult{
+					Type: ARPDone,
+				}
 				return
 			}
 		}
@@ -261,7 +260,10 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 	}
 
 	go func() {
-		s.resultChan <- arpResult
+		s.resultChan <- &ScanResult{
+			Type:    ARPResult,
+			Payload: arpResult,
+		}
 	}()
 }
 
