@@ -64,6 +64,16 @@ $(zips): $(objects)
 .PHONY: release
 release: $(zips)
 
+# run tests
+.PHONY: test
+test:
+	go test -v -race ./...
+
+# generate mocks
+.PHONY: mock
+mock:
+	go generate ./...
+
 # remove buid directory and installed executable
 .PHONY: clean
 clean:
