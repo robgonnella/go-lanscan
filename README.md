@@ -70,9 +70,9 @@ First you must install the following dependencies
 
 ### Example Usage
 
-- [arp-scanner](./examples/arpscan.go)
-- [syn-scanner](./examples/synscan.go)
-- [full-scanner](./examples/fullscan.go)
+- [arp-scanner](./examples/arp/arpscan.go)
+- [syn-scanner](./examples/syn/synscan.go)
+- [full-scanner](./examples/full/fullscan.go)
 
 ### Package Options
 

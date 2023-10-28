@@ -3,6 +3,7 @@
 package logger
 
 import (
+	"bytes"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -19,14 +20,7 @@ var logger Logger
 
 // init sets the internal "singleton" logger
 func init() {
-	zl := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-		With().
-		Timestamp().
-		Logger()
-
-	logger = Logger{
-		zl: &zl,
-	}
+	Reset()
 }
 
 // New returns the internal "singleton" logger
@@ -61,6 +55,25 @@ func SetGlobalLogFile(f *os.File) {
 	newZl := logger.zl.Output(f)
 
 	*logger.zl = newZl
+}
+
+// SetBufferOutput sets logger output (only used for testing)
+func SetBufferOutput(buf *bytes.Buffer) {
+	newZl := logger.zl.Output(buf)
+
+	*logger.zl = newZl
+}
+
+// Reset resets logger to default values
+func Reset() {
+	zl := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
+
+	logger = Logger{
+		zl: &zl,
+	}
 }
 
 // Info wrapper around zerolog Info
