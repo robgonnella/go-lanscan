@@ -4,12 +4,16 @@ package main
 
 import (
 	"github.com/robgonnella/go-lanscan/internal/cli"
+	"github.com/robgonnella/go-lanscan/internal/core"
 	"github.com/robgonnella/go-lanscan/internal/logger"
 )
 
 func main() {
 	log := logger.New()
-	cmd, err := cli.NewRoot()
+
+	runner := core.New()
+
+	cmd, err := cli.Root(runner)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize cli")

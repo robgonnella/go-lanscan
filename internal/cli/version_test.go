@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/robgonnella/go-lanscan/internal/cli"
+	"github.com/robgonnella/go-lanscan/internal/core"
 	"github.com/robgonnella/go-lanscan/internal/info"
 	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,9 @@ func TestVersionCommand(t *testing.T) {
 	logger.SetBufferOutput(buf)
 
 	t.Run("prints versions to console", func(st *testing.T) {
-		cmd, err := cli.NewRoot()
+		runner := core.New()
+
+		cmd, err := cli.Root(runner)
 
 		assert.NoError(st, err)
 

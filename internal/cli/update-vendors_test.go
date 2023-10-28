@@ -7,12 +7,15 @@ import (
 	"testing"
 
 	"github.com/robgonnella/go-lanscan/internal/cli"
+	"github.com/robgonnella/go-lanscan/internal/core"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestUpdatesVendorsCommand(t *testing.T) {
 	t.Run("updates static vendor file", func(st *testing.T) {
+		runner := core.New()
+
 		ouiTxt, err := util.GetDefaultOuiTxtPath()
 
 		assert.NoError(st, err)
@@ -21,7 +24,7 @@ func TestUpdatesVendorsCommand(t *testing.T) {
 
 		assert.NoError(st, err)
 
-		cmd, err := cli.NewRoot()
+		cmd, err := cli.Root(runner)
 
 		assert.NoError(st, err)
 
