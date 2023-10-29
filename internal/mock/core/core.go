@@ -39,15 +39,15 @@ func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 }
 
 // Initialize mocks base method.
-func (m *MockRunner) Initialize(arg0 string, arg1 []string, arg2 *network.NetworkInfo, arg3 []string, arg4 uint16, arg5 int, arg6, arg7, arg8 bool) {
+func (m *MockRunner) Initialize(arg0 string, arg1 []string, arg2 *network.NetworkInfo, arg3 []string, arg4 uint16, arg5 int, arg6, arg7, arg8, arg9 bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 }
 
 // Initialize indicates an expected call of Initialize.
-func (mr *MockRunnerMockRecorder) Initialize(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 any) *gomock.Call {
+func (mr *MockRunnerMockRecorder) Initialize(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockRunner)(nil).Initialize), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockRunner)(nil).Initialize), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 }
 
 // Run mocks base method.

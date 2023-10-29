@@ -47,7 +47,9 @@ func LoopTargets(targets []string, f func(target net.IP) error) error {
 				return err
 			}
 
-			return LoopNetIPHosts(ipnet, f)
+			if err := LoopNetIPHosts(ipnet, f); err != nil {
+				return err
+			}
 		} else {
 			parts := strings.Split(t, "-")
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package version_test
 
 import (
@@ -11,11 +13,11 @@ import (
 )
 
 func TestBumpVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	defer ctrl.Finish()
+
 	t.Run("returns error if version does not start with v", func(st *testing.T) {
-		ctrl := gomock.NewController(t)
-
-		defer ctrl.Finish()
-
 		mockVc := mock_version.NewMockVersionControl(ctrl)
 		mockVg := mock_version.NewMockVersionGenerator(ctrl)
 
@@ -35,10 +37,6 @@ func TestBumpVersion(t *testing.T) {
 	})
 
 	t.Run("it bumps version", func(st *testing.T) {
-		ctrl := gomock.NewController(t)
-
-		defer ctrl.Finish()
-
 		mockVc := mock_version.NewMockVersionControl(ctrl)
 		mockVg := mock_version.NewMockVersionGenerator(ctrl)
 

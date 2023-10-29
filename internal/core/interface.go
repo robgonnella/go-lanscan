@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package core
 
 import "github.com/robgonnella/go-lanscan/pkg/network"
