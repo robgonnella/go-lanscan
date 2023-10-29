@@ -20,6 +20,10 @@ component_path = $(prefix)/$(component)
 linux_objects = $(component_path)_linux_$(arch)
 darwin_objects = $(component_path)_darwin_$(arch)
 
+#### Test Objects ####
+test_output_dir = coverage
+coverage_out = $(test_output_dir)/coverage.txt
+
 #### Gather Objects ####
 
 ifeq ($(platform),Linux)
@@ -64,15 +68,38 @@ $(zips): $(objects)
 .PHONY: release
 release: $(zips)
 
-# run tests
-.PHONY: test
-test:
-	go test -v -race ./...
-
 # generate mocks
 .PHONY: mock
 mock:
 	go generate ./...
+
+.PHONY: lint
+lint:
+	golint -set_exit_status ./...
+
+.PHONY: test
+test:
+	mkdir -p $(test_output_dir)
+	rm -rf $(coverage_out)
+	go test \
+		-v \
+		-race \
+		-coverprofile $(coverage_out) \
+		-covermode=atomic \
+		./...
+
+.PHONY: coverage
+coverage:
+	go tool cover -func $(coverage_out)
+
+.PHONY: test-report
+test-report:
+	go tool cover -html=$(coverage_out)
+
+.PHONY: deps
+deps:
+	go install go.uber.org/mock/mockgen@latest
+	go install golang.org/x/lint/golint@latest
 
 # remove buid directory and installed executable
 .PHONY: clean

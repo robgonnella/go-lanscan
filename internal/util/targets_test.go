@@ -87,14 +87,60 @@ func TestLoopTargets(t *testing.T) {
 		assert.Equal(st, 20, callbackCalledCount)
 	})
 
-	t.Run("returns error if callback returns error", func(st *testing.T) {
+	t.Run("returns error if fails to parse cidr", func(st *testing.T) {
 		targets := []string{
-			"172.16.1.1/28",
-			"172.17.1.1-172.17.1.3",
-			"172.17.1.5",
+			"1/28",
 		}
 
-		testErr := errors.New("test error looping targets")
+		callback := func(ip net.IP) error {
+			return nil
+		}
+
+		err := util.LoopTargets(targets, callback)
+
+		assert.Error(st, err)
+	})
+
+	t.Run("returns error if loop ipnet callback returns error", func(st *testing.T) {
+		targets := []string{
+			"172.16.1.1/28",
+		}
+
+		testErr := errors.New("test error looping ipnet targets")
+
+		callback := func(ip net.IP) error {
+			return testErr
+		}
+
+		actualErr := util.LoopTargets(targets, callback)
+
+		assert.Error(st, actualErr)
+		assert.ErrorIs(st, testErr, actualErr)
+	})
+
+	t.Run("returns error if loop range callback returns error", func(st *testing.T) {
+		targets := []string{
+			"172.17.1.1-172.17.1.3",
+		}
+
+		testErr := errors.New("test error looping range targets")
+
+		callback := func(ip net.IP) error {
+			return testErr
+		}
+
+		actualErr := util.LoopTargets(targets, callback)
+
+		assert.Error(st, actualErr)
+		assert.ErrorIs(st, testErr, actualErr)
+	})
+
+	t.Run("returns error if loop single target callback returns error", func(st *testing.T) {
+		targets := []string{
+			"172.17.1.1",
+		}
+
+		testErr := errors.New("test error looping single target")
 
 		callback := func(ip net.IP) error {
 			return testErr
@@ -177,7 +223,7 @@ func TestLoopPorts(t *testing.T) {
 
 	t.Run("returns error for invalid port range", func(st *testing.T) {
 		ports := []string{
-			"1-",
+			"-",
 			"22",
 		}
 
