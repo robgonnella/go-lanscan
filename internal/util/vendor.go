@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 func GetDefaultOuiTxtPath() (*string, error) {
@@ -18,16 +19,18 @@ func GetDefaultOuiTxtPath() (*string, error) {
 
 	dir := path.Join(home, ".config", "go-lanscan")
 
-	if err := os.MkdirAll(dir, 0751); err != nil {
-		return nil, err
-	}
-
 	ouiTxt := path.Join(dir, "oui.txt")
 
 	return &ouiTxt, nil
 }
 
 func UpdateStaticVendors(ouiTxt string) error {
+	dir := filepath.Dir(ouiTxt)
+
+	if err := os.MkdirAll(dir, 0751); err != nil {
+		return err
+	}
+
 	resp, err := http.Get("https://standards-oui.ieee.org/oui/oui.txt")
 
 	if err != nil {
