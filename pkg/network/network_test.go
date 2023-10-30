@@ -76,3 +76,12 @@ func TestGetNetworkInfoFromInterface(t *testing.T) {
 		assert.NotNil(st, netInfo)
 	})
 }
+
+func TestGetNetworkInfo(t *testing.T) {
+	t.Run("gets default network info", func(st *testing.T) {
+		netInfo, err := network.GetNetworkInfo()
+
+		assert.NoError(st, err)
+		assert.NotNil(st, netInfo)
+	})
+}
