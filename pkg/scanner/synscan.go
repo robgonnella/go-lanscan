@@ -3,7 +3,6 @@
 package scanner
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -18,8 +17,7 @@ import (
 )
 
 type SynScanner struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
+	stop             chan struct{}
 	networkInfo      network.Network
 	targets          []*ArpScanResult
 	ports            []string
@@ -44,11 +42,8 @@ func NewSynScanner(
 	resultChan chan *ScanResult,
 	options ...ScannerOption,
 ) *SynScanner {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	scanner := &SynScanner{
-		ctx:              ctx,
-		cancel:           cancel,
+		stop:             make(chan struct{}),
 		targets:          targets,
 		networkInfo:      networkInfo,
 		cap:              &defaultPacketCapture{},
@@ -142,17 +137,21 @@ func (s *SynScanner) Scan() error {
 }
 
 func (s *SynScanner) Stop() {
-	s.cancel()
+	s.stop <- struct{}{}
+
+	<-s.stop
+
 	if s.handle != nil {
 		s.handle.Close()
 	}
+
 	s.scanningMux.Lock()
 	s.scanning = false
 	s.scanningMux.Unlock()
+
 	s.packetSentAtMux.Lock()
 	s.lastPacketSentAt = time.Time{}
 	s.packetSentAtMux.Unlock()
-	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
 func (s *SynScanner) SetRequestNotifications(cb func(a *Request)) {
@@ -182,16 +181,17 @@ func (s *SynScanner) readPackets() {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.stop:
+			s.stop <- struct{}{}
 			return
 		case packet := <-packetSource.Packets():
 			go s.handlePacket(packet)
 		default:
 			s.packetSentAtMux.RLock()
-			defer s.packetSentAtMux.RUnlock()
+			packetSentAt := s.lastPacketSentAt
+			s.packetSentAtMux.RUnlock()
 
-			if !s.lastPacketSentAt.IsZero() && time.Since(s.lastPacketSentAt) >= s.idleTimeout {
-				s.Stop()
+			if !packetSentAt.IsZero() && time.Since(packetSentAt) >= s.idleTimeout {
 				s.resultChan <- &ScanResult{
 					Type: SYNDone,
 				}
