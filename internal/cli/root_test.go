@@ -1,13 +1,12 @@
 package cli_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/robgonnella/go-lanscan/internal/cli"
 	mock_core "github.com/robgonnella/go-lanscan/internal/mock/core"
-	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -19,15 +18,13 @@ func TestRootCommand(t *testing.T) {
 	t.Run("initializes runner and performs scan", func(st *testing.T) {
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		netInfo, err := network.GetNetworkInfo()
+		netInfo, err := network.NewDefaultNetwork()
 
 		assert.NoError(st, err)
 
-		ouiTxt, err := util.GetDefaultOuiTxtPath()
+		vendorRepo, err := vendor.GetDefaultVendorRepo()
 
 		assert.NoError(st, err)
-
-		os.RemoveAll(*ouiTxt)
 
 		cmd, err := cli.Root(mockRunner)
 
@@ -44,6 +41,7 @@ func TestRootCommand(t *testing.T) {
 			false,
 			false,
 			false,
+			vendorRepo,
 		)
 
 		mockRunner.EXPECT().Run()

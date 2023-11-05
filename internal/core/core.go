@@ -19,6 +19,7 @@ import (
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 	"github.com/rs/zerolog"
 )
 
@@ -68,7 +69,7 @@ type Core struct {
 	noProgress         bool
 	targets            []string
 	totalTargets       int
-	netInfo            *network.NetworkInfo
+	userNet            network.Network
 	totalHosts         int
 	ports              []string
 	listenPort         uint16
@@ -89,7 +90,7 @@ func New() *Core {
 func (c *Core) Initialize(
 	accuracy string,
 	targets []string,
-	netInfo *network.NetworkInfo,
+	userNet network.Network,
 	ports []string,
 	listenPort uint16,
 	idleTimeoutSeconds int,
@@ -97,6 +98,7 @@ func (c *Core) Initialize(
 	printJson bool,
 	vendorInfo bool,
 	arpOnly bool,
+	vendorRepo vendor.VendorRepo,
 ) {
 	var scannerAccuracy scanner.Accuracy
 
@@ -118,19 +120,21 @@ func (c *Core) Initialize(
 	if arpOnly {
 		coreScanner = scanner.NewArpScanner(
 			targets,
-			netInfo,
+			userNet,
 			scanResults,
+			vendorRepo,
 			scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 			scanner.WithVendorInfo(vendorInfo),
 			scanner.WithAccuracy(scannerAccuracy),
 		)
 	} else {
 		coreScanner = scanner.NewFullScanner(
-			netInfo,
+			userNet,
 			targets,
 			ports,
 			listenPort,
 			scanResults,
+			vendorRepo,
 			scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 			scanner.WithVendorInfo(vendorInfo),
 			scanner.WithAccuracy(scannerAccuracy),
@@ -145,7 +149,7 @@ func (c *Core) Initialize(
 	}
 
 	c.targets = targets
-	c.netInfo = netInfo
+	c.userNet = userNet
 	c.ports = ports
 	c.listenPort = listenPort
 	c.idleTimeoutSeconds = idleTimeoutSeconds
@@ -155,7 +159,7 @@ func (c *Core) Initialize(
 	c.results = results
 	c.pw = pw
 	c.totalTargets = util.TotalTargets(targets)
-	c.totalHosts = util.IPHostTotal(netInfo.IPNet)
+	c.totalHosts = util.IPHostTotal(userNet.IPNet())
 	c.arpTracker = tracker(pw, "starting arp scan", true)
 	c.synTracker = tracker(pw, "starting syn scan", false)
 	c.scanResults = scanResults

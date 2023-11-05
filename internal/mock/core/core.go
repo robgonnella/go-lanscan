@@ -12,6 +12,7 @@ import (
 	reflect "reflect"
 
 	network "github.com/robgonnella/go-lanscan/pkg/network"
+	vendor "github.com/robgonnella/go-lanscan/pkg/vendor"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -39,15 +40,15 @@ func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 }
 
 // Initialize mocks base method.
-func (m *MockRunner) Initialize(arg0 string, arg1 []string, arg2 *network.NetworkInfo, arg3 []string, arg4 uint16, arg5 int, arg6, arg7, arg8, arg9 bool) {
+func (m *MockRunner) Initialize(arg0 string, arg1 []string, arg2 network.Network, arg3 []string, arg4 uint16, arg5 int, arg6, arg7, arg8, arg9 bool, arg10 vendor.VendorRepo) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
 }
 
 // Initialize indicates an expected call of Initialize.
-func (mr *MockRunnerMockRecorder) Initialize(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 any) *gomock.Call {
+func (mr *MockRunnerMockRecorder) Initialize(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockRunner)(nil).Initialize), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockRunner)(nil).Initialize), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)
 }
 
 // Run mocks base method.

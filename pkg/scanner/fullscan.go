@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
 type FullScanner struct {
@@ -19,7 +21,7 @@ type FullScanner struct {
 	targets             []string
 	ports               []string
 	listenPort          uint16
-	netInfo             *network.NetworkInfo
+	netInfo             network.Network
 	options             []ScannerOption
 	devices             []*ArpScanResult
 	arpScanner          *ArpScanner
@@ -27,14 +29,18 @@ type FullScanner struct {
 	internalScanResults chan *ScanResult
 	consumerResults     chan *ScanResult
 	errorChan           chan error
+	scanning            bool
+	scanningMux         *sync.RWMutex
+	deviceMux           *sync.RWMutex
 }
 
 func NewFullScanner(
-	netInfo *network.NetworkInfo,
+	netInfo network.Network,
 	targets,
 	ports []string,
 	listenPort uint16,
 	results chan *ScanResult,
+	vendorRepo vendor.VendorRepo,
 	options ...ScannerOption,
 ) *FullScanner {
 	internalScanResults := make(chan *ScanResult)
@@ -43,6 +49,7 @@ func NewFullScanner(
 		targets,
 		netInfo,
 		internalScanResults,
+		vendorRepo,
 		options...,
 	)
 
@@ -62,6 +69,9 @@ func NewFullScanner(
 		internalScanResults: internalScanResults,
 		errorChan:           make(chan error),
 		options:             options,
+		scanning:            false,
+		scanningMux:         &sync.RWMutex{},
+		deviceMux:           &sync.RWMutex{},
 	}
 
 	for _, o := range options {
@@ -72,7 +82,17 @@ func NewFullScanner(
 }
 
 func (s *FullScanner) Scan() error {
-	defer s.Stop()
+	s.scanningMux.RLock()
+	scanning := s.scanning
+	s.scanningMux.RUnlock()
+
+	if scanning {
+		return nil
+	}
+
+	s.scanningMux.Lock()
+	s.scanning = true
+	s.scanningMux.Unlock()
 
 	go func() {
 		if err := s.arpScanner.Scan(); err != nil {
@@ -83,13 +103,13 @@ func (s *FullScanner) Scan() error {
 	for {
 		select {
 		case <-s.ctx.Done():
-			return s.ctx.Err()
+			return nil
 		case r := <-s.internalScanResults:
 			switch r.Type {
 			case ARPResult:
-				s.handleArpResult(r.Payload.(*ArpScanResult))
+				go s.handleArpResult(r.Payload.(*ArpScanResult))
 			case ARPDone:
-				s.handleArpDone()
+				go s.handleArpDone()
 			case SYNResult:
 				go func() {
 					s.consumerResults <- r
@@ -111,6 +131,16 @@ func (s *FullScanner) Scan() error {
 func (s *FullScanner) Stop() {
 	s.cancel()
 	s.ctx, s.cancel = context.WithCancel(context.Background())
+
+	s.deviceMux.Lock()
+	defer s.deviceMux.Unlock()
+
+	s.devices = []*ArpScanResult{}
+
+	s.scanningMux.Lock()
+	defer s.scanningMux.Unlock()
+
+	s.scanning = false
 }
 
 func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {
@@ -133,7 +163,15 @@ func (s *FullScanner) SetAccuracy(accuracy Accuracy) {
 	s.options = append(s.options, WithAccuracy(accuracy))
 }
 
+func (s *FullScanner) SetPacketCapture(cap PacketCapture) {
+	s.arpScanner.SetPacketCapture(cap)
+	s.options = append(s.options, WithPacketCapture(cap))
+}
+
 func (s *FullScanner) handleArpDone() {
+	s.deviceMux.RLock()
+	defer s.deviceMux.RUnlock()
+
 	go func() {
 		s.consumerResults <- &ScanResult{
 			Type: ARPDone,
@@ -157,6 +195,9 @@ func (s *FullScanner) handleArpDone() {
 }
 
 func (s *FullScanner) handleArpResult(result *ArpScanResult) {
+	s.deviceMux.Lock()
+	defer s.deviceMux.Unlock()
+
 	go func() {
 		s.consumerResults <- &ScanResult{
 			Type:    ARPResult,

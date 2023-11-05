@@ -2,7 +2,10 @@
 
 package core
 
-import "github.com/robgonnella/go-lanscan/pkg/network"
+import (
+	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
+)
 
 //go:generate mockgen -destination=../mock/core/core.go -package=mock_core . Runner
 
@@ -10,7 +13,7 @@ type Runner interface {
 	Initialize(
 		accuracy string,
 		targets []string,
-		netInfo *network.NetworkInfo,
+		netInfo network.Network,
 		ports []string,
 		listenPort uint16,
 		idleTimeoutSeconds int,
@@ -18,6 +21,7 @@ type Runner interface {
 		printJson bool,
 		vendorInfo bool,
 		arpOnly bool,
+		vendorRepo vendor.VendorRepo,
 	)
 	Run() error
 }

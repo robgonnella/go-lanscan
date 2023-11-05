@@ -1,14 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package util
+package vendor
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/klauspost/oui"
 )
+
+func GetDefaultVendorRepo() (*OUIVendorRepo, error) {
+	ouiTxt, err := GetDefaultOuiTxtPath()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(*ouiTxt); errors.Is(err, os.ErrNotExist) {
+		if err := UpdateStaticVendors(*ouiTxt); err != nil {
+			return nil, err
+		}
+	}
+
+	db, err := oui.OpenStaticFile(*ouiTxt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return NewOUIVendorRepo(db), nil
+}
 
 func GetDefaultOuiTxtPath() (*string, error) {
 	home, err := os.UserHomeDir()

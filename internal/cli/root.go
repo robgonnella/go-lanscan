@@ -3,16 +3,13 @@
 package cli
 
 import (
-	"errors"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/robgonnella/go-lanscan/internal/core"
-	"github.com/robgonnella/go-lanscan/internal/logger"
-	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
 func Root(runner core.Runner) (*cobra.Command, error) {
@@ -27,7 +24,7 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 	var accuracy string
 	var arpOnly bool
 
-	netInfo, err := network.GetNetworkInfo()
+	userNet, err := network.NewDefaultNetwork()
 
 	if err != nil {
 		return nil, err
@@ -38,41 +35,30 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 		Short: "Scan your LAN!",
 		Long:  `CLI to scan your Local Area Network`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log := logger.New()
-
-			ouiTxt, err := util.GetDefaultOuiTxtPath()
+			vendorRepo, err := vendor.GetDefaultVendorRepo()
 
 			if err != nil {
 				return err
 			}
 
-			if _, err := os.Stat(*ouiTxt); errors.Is(err, os.ErrNotExist) {
-				log.Info().
-					Str("file", *ouiTxt).
-					Msg("updating vendor database")
-				if err := util.UpdateStaticVendors(*ouiTxt); err != nil {
-					return err
-				}
-			}
-
 			portList := strings.Split(ports, ",")
 
-			if ifaceName != netInfo.Interface.Name {
-				netInfo, err = network.GetNetworkInfoFromInterface(ifaceName)
+			if ifaceName != userNet.Interface().Name {
+				userNet, err = network.NewNetworkFromInterfaceName(ifaceName)
 
 				if err != nil {
 					return err
 				}
 			}
 
-			if len(targets) == 1 && targets[0] == netInfo.Cidr {
+			if len(targets) == 1 && targets[0] == userNet.Cidr() {
 				targets = []string{}
 			}
 
 			runner.Initialize(
 				accuracy,
 				targets,
-				netInfo,
+				userNet,
 				portList,
 				listenPort,
 				idleTimeoutSeconds,
@@ -80,6 +66,7 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 				printJson,
 				vendorInfo,
 				arpOnly,
+				vendorRepo,
 			)
 
 			return runner.Run()
@@ -92,8 +79,8 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 	cmd.Flags().StringVarP(&ports, "ports", "p", "1-65535", "target ports")
 	cmd.Flags().IntVar(&idleTimeoutSeconds, "idle-timeout", 5, "timeout when no expected packets are received for this duration")
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
-	cmd.Flags().StringVarP(&ifaceName, "interface", "i", netInfo.Interface.Name, "set the interface for scanning")
-	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{netInfo.Cidr}, "set targets for scanning")
+	cmd.Flags().StringVarP(&ifaceName, "interface", "i", userNet.Interface().Name, "set the interface for scanning")
+	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{userNet.Cidr()}, "set targets for scanning")
 	cmd.Flags().StringVar(&accuracy, "accuracy", "high", "sets throttle to ensure fewer packets are dropped. Valid values are high (slower more accurate), medium, low (faster less accurate)")
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 

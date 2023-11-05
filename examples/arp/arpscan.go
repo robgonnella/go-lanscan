@@ -9,12 +9,19 @@ import (
 
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
 func main() {
 	// Find default interface info
 	// i.e. Interface, IPNet, IP
-	netInfo, err := network.GetNetworkInfo()
+	userNet, err := network.NewDefaultNetwork()
+
+	if err != nil {
+		panic(err)
+	}
+
+	vendorRepo, err := vendor.GetDefaultVendorRepo()
 
 	if err != nil {
 		panic(err)
@@ -29,8 +36,9 @@ func main() {
 
 	arpScanner := scanner.NewArpScanner(
 		targets,
-		netInfo,
+		userNet,
 		results,
+		vendorRepo,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeout)),
 	)
 

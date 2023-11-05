@@ -5,7 +5,11 @@ package scanner
 import (
 	"net"
 	"time"
+
+	"github.com/google/gopacket"
 )
+
+//go:generate mockgen -destination=../../mock/scanner/scanner.go -package=mock_scanner . Scanner,PacketCaptureHandle,PacketCapture
 
 type RequestType string
 
@@ -28,6 +32,19 @@ type Scanner interface {
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(value bool)
 	SetAccuracy(accuracy Accuracy)
+	SetPacketCapture(cap PacketCapture)
+}
+
+type PacketCaptureHandle interface {
+	Close()
+	ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error)
+	WritePacketData(data []byte) (err error)
+	SetBPFFilter(expr string) (err error)
+}
+
+type PacketCapture interface {
+	OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle PacketCaptureHandle, _ error)
+	SerializeLayers(w gopacket.SerializeBuffer, opts gopacket.SerializeOptions, layers ...gopacket.SerializableLayer) error
 }
 
 // Status represents possible server statues

@@ -15,7 +15,7 @@ import (
 func main() {
 	// Find default interface info
 	// i.e. Interface, IPNet, IP
-	netInfo, err := network.GetNetworkInfo()
+	userNet, err := network.NewDefaultNetwork()
 
 	if err != nil {
 		panic(err)
@@ -40,7 +40,7 @@ func main() {
 
 	synScanner := scanner.NewSynScanner(
 		targets,
-		netInfo,
+		userNet,
 		ports,
 		listenPort,
 		results,

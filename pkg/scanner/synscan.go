@@ -6,11 +6,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
 	"github.com/thediveo/netdb"
 
 	"github.com/robgonnella/go-lanscan/internal/util"
@@ -20,22 +20,25 @@ import (
 type SynScanner struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
-	networkInfo      *network.NetworkInfo
+	networkInfo      network.Network
 	targets          []*ArpScanResult
 	ports            []string
 	listenPort       uint16
-	handle           *pcap.Handle
+	cap              PacketCapture
+	handle           PacketCaptureHandle
 	resultChan       chan *ScanResult
 	notificationCB   func(a *Request)
 	scanning         bool
 	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
 	accuracy         time.Duration
+	scanningMux      *sync.RWMutex
+	packetSentAtMux  *sync.RWMutex
 }
 
 func NewSynScanner(
 	targets []*ArpScanResult,
-	networkInfo *network.NetworkInfo,
+	networkInfo network.Network,
 	ports []string,
 	listenPort uint16,
 	resultChan chan *ScanResult,
@@ -48,6 +51,7 @@ func NewSynScanner(
 		cancel:           cancel,
 		targets:          targets,
 		networkInfo:      networkInfo,
+		cap:              &defaultPacketCapture{},
 		ports:            ports,
 		listenPort:       listenPort,
 		resultChan:       resultChan,
@@ -55,6 +59,8 @@ func NewSynScanner(
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
 		accuracy:         time.Millisecond,
+		scanningMux:      &sync.RWMutex{},
+		packetSentAtMux:  &sync.RWMutex{},
 	}
 
 	for _, o := range options {
@@ -65,18 +71,27 @@ func NewSynScanner(
 }
 
 func (s *SynScanner) Scan() error {
-	if s.scanning {
+	s.scanningMux.RLock()
+	scanning := s.scanning
+	s.scanningMux.RUnlock()
+
+	if scanning {
 		return nil
 	}
 
-	handle, err := pcap.OpenLive(
-		s.networkInfo.Interface.Name,
+	s.scanningMux.Lock()
+	s.scanning = true
+
+	handle, err := s.cap.OpenLive(
+		s.networkInfo.Interface().Name,
 		65536,
 		true,
 		s.idleTimeout,
 	)
 
 	if err != nil {
+		s.scanning = false
+		s.scanningMux.Unlock()
 		return err
 	}
 
@@ -88,12 +103,14 @@ func (s *SynScanner) Scan() error {
 	err = handle.SetBPFFilter(expr)
 
 	if err != nil {
+		s.scanning = false
+		s.scanningMux.Unlock()
 		return err
 	}
 
-	s.handle = handle
+	s.scanningMux.Unlock()
 
-	s.scanning = true
+	s.handle = handle
 
 	go s.readPackets()
 
@@ -117,6 +134,8 @@ func (s *SynScanner) Scan() error {
 		}
 	}
 
+	s.packetSentAtMux.Lock()
+	defer s.packetSentAtMux.Unlock()
 	s.lastPacketSentAt = time.Now()
 
 	return nil
@@ -127,8 +146,12 @@ func (s *SynScanner) Stop() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
+	s.scanningMux.Lock()
 	s.scanning = false
+	s.scanningMux.Unlock()
+	s.packetSentAtMux.Lock()
 	s.lastPacketSentAt = time.Time{}
+	s.packetSentAtMux.Unlock()
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 }
 
@@ -148,6 +171,10 @@ func (s *SynScanner) IncludeVendorInfo(value bool) {
 	// nothing to do
 }
 
+func (s *SynScanner) SetPacketCapture(cap PacketCapture) {
+	s.cap = cap
+}
+
 func (s *SynScanner) readPackets() {
 	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
 	packetSource.DecodeOptions.NoCopy = true
@@ -156,11 +183,13 @@ func (s *SynScanner) readPackets() {
 	for {
 		select {
 		case <-s.ctx.Done():
-			s.Stop()
 			return
 		case packet := <-packetSource.Packets():
 			go s.handlePacket(packet)
 		default:
+			s.packetSentAtMux.RLock()
+			defer s.packetSentAtMux.RUnlock()
+
 			if !s.lastPacketSentAt.IsZero() && time.Since(s.lastPacketSentAt) >= s.idleTimeout {
 				s.Stop()
 				s.resultChan <- &ScanResult{
@@ -248,13 +277,13 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 	}
 
 	eth := layers.Ethernet{
-		SrcMAC:       s.networkInfo.Interface.HardwareAddr,
+		SrcMAC:       s.networkInfo.Interface().HardwareAddr,
 		DstMAC:       target.MAC,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
 	ip4 := layers.IPv4{
-		SrcIP:    s.networkInfo.UserIP.To4(),
+		SrcIP:    s.networkInfo.UserIP().To4(),
 		DstIP:    target.IP.To4(),
 		Version:  4,
 		TTL:      64,
@@ -269,7 +298,7 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 
 	tcp.SetNetworkLayerForChecksum(&ip4)
 
-	if err := gopacket.SerializeLayers(buf, opts, &eth, &ip4, &tcp); err != nil {
+	if err := s.cap.SerializeLayers(buf, opts, &eth, &ip4, &tcp); err != nil {
 		return err
 	}
 

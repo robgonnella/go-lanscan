@@ -47,12 +47,12 @@ func WithIdleTimeout(duration time.Duration) ScannerOption {
 
 func WithVendorInfo(value bool) ScannerOption {
 	return func(s Scanner) {
-		scanner, ok := s.(*ArpScanner)
+		s.IncludeVendorInfo(value)
+	}
+}
 
-		if !ok {
-			return
-		}
-
-		scanner.includeVendor = value
+func WithPacketCapture(cap PacketCapture) ScannerOption {
+	return func(s Scanner) {
+		s.SetPacketCapture(cap)
 	}
 }

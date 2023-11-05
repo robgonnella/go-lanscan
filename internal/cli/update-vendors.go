@@ -4,7 +4,7 @@ package cli
 
 import (
 	"github.com/robgonnella/go-lanscan/internal/logger"
-	"github.com/robgonnella/go-lanscan/internal/util"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +16,7 @@ func newUpdateVendors() *cobra.Command {
 		be found at ~/.config/go-lanscan/oui.txt`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ouiTxt, err := util.GetDefaultOuiTxtPath()
+			ouiTxt, err := vendor.GetDefaultOuiTxtPath()
 
 			if err != nil {
 				return err
@@ -27,7 +27,7 @@ func newUpdateVendors() *cobra.Command {
 				Str("file", *ouiTxt).
 				Msg("updating vendor database")
 
-			return util.UpdateStaticVendors(*ouiTxt)
+			return vendor.UpdateStaticVendors(*ouiTxt)
 		},
 	}
 }
