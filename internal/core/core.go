@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,9 +16,7 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
-	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
 	"github.com/rs/zerolog"
 )
 
@@ -63,84 +60,35 @@ func (r *Results) MarshalJSON() ([]byte, error) {
 }
 
 type Core struct {
-	idleTimeoutSeconds int
-	arpOnly            bool
-	printJson          bool
-	noProgress         bool
-	targets            []string
-	totalTargets       int
-	userNet            network.Network
-	totalHosts         int
-	ports              []string
-	listenPort         uint16
-	results            *Results
-	pw                 progress.Writer
-	arpTracker         *progress.Tracker
-	synTracker         *progress.Tracker
-	scanResults        chan *scanner.ScanResult
-	errorChan          chan error
-	scanner            scanner.Scanner
-	log                logger.Logger
+	arpOnly     bool
+	printJson   bool
+	noProgress  bool
+	portLen     int
+	results     *Results
+	pw          progress.Writer
+	arpTracker  *progress.Tracker
+	synTracker  *progress.Tracker
+	scanResults chan *scanner.ScanResult
+	errorChan   chan error
+	scanner     scanner.Scanner
+	log         logger.Logger
 }
 
 func New() *Core {
-	return &Core{}
+	return &Core{
+		log: logger.New(),
+	}
 }
 
 func (c *Core) Initialize(
-	accuracy string,
-	targets []string,
-	userNet network.Network,
-	ports []string,
-	listenPort uint16,
-	idleTimeoutSeconds int,
+	coreScanner scanner.Scanner,
+	scanResults chan *scanner.ScanResult,
+	targetLen int,
+	portLen int,
 	noProgress bool,
-	printJson bool,
-	vendorInfo bool,
 	arpOnly bool,
-	vendorRepo vendor.VendorRepo,
+	printJson bool,
 ) {
-	var scannerAccuracy scanner.Accuracy
-
-	switch strings.ToLower(accuracy) {
-	case "low":
-		scannerAccuracy = scanner.LOW_ACCURACY
-	case "medium":
-		scannerAccuracy = scanner.MEDIUM_ACCURACY
-	case "high":
-		scannerAccuracy = scanner.HIGH_ACCURACY
-	default:
-		scannerAccuracy = scanner.HIGH_ACCURACY
-	}
-
-	scanResults := make(chan *scanner.ScanResult)
-
-	var coreScanner scanner.Scanner
-
-	if arpOnly {
-		coreScanner = scanner.NewArpScanner(
-			targets,
-			userNet,
-			scanResults,
-			vendorRepo,
-			scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-			scanner.WithVendorInfo(vendorInfo),
-			scanner.WithAccuracy(scannerAccuracy),
-		)
-	} else {
-		coreScanner = scanner.NewFullScanner(
-			userNet,
-			targets,
-			ports,
-			listenPort,
-			scanResults,
-			vendorRepo,
-			scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-			scanner.WithVendorInfo(vendorInfo),
-			scanner.WithAccuracy(scannerAccuracy),
-		)
-	}
-
 	pw := progressWriter()
 
 	results := &Results{
@@ -148,36 +96,26 @@ func (c *Core) Initialize(
 		DeviceMux: sync.Mutex{},
 	}
 
-	c.targets = targets
-	c.userNet = userNet
-	c.ports = ports
-	c.listenPort = listenPort
-	c.idleTimeoutSeconds = idleTimeoutSeconds
-	c.noProgress = noProgress
-	c.arpOnly = arpOnly
-	c.printJson = printJson
-	c.results = results
-	c.pw = pw
-	c.totalTargets = util.TotalTargets(targets)
-	c.totalHosts = util.IPHostTotal(userNet.IPNet())
-	c.arpTracker = tracker(pw, "starting arp scan", true)
-	c.synTracker = tracker(pw, "starting syn scan", false)
-	c.scanResults = scanResults
-	c.scanner = coreScanner
-	c.errorChan = make(chan error)
-	c.log = logger.New()
-
-	if c.totalTargets > 0 {
-		c.arpTracker.Total = int64(c.totalTargets)
-	} else {
-		c.arpTracker.Total = int64(c.totalHosts)
-	}
+	arpTracker := tracker(pw, "starting arp scan", true)
+	arpTracker.Total = int64(targetLen)
 
 	if noProgress {
 		logger.SetGlobalLevel(zerolog.Disabled)
 	} else {
 		coreScanner.SetRequestNotifications(c.requestCallback)
 	}
+
+	c.scanner = coreScanner
+	c.scanResults = scanResults
+	c.results = results
+	c.errorChan = make(chan error)
+	c.portLen = portLen
+	c.pw = pw
+	c.arpTracker = arpTracker
+	c.synTracker = tracker(pw, "starting syn scan", false)
+	c.noProgress = noProgress
+	c.arpOnly = arpOnly
+	c.printJson = printJson
 }
 
 func (c *Core) Run() error {
@@ -305,7 +243,7 @@ func (c *Core) processArpDone() {
 
 		if !c.arpOnly && len(c.results.Devices) > 0 {
 			c.synTracker.Total = int64(
-				len(c.results.Devices) * util.PortTotal(c.ports),
+				len(c.results.Devices) * c.portLen,
 			)
 			c.pw.AppendTracker(c.synTracker)
 		}

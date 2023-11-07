@@ -1,3 +1,146 @@
 package core_test
 
-// TODO: add tests
+import (
+	"encoding/json"
+	"net"
+	"sync"
+	"testing"
+
+	"github.com/robgonnella/go-lanscan/internal/core"
+	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
+	"github.com/robgonnella/go-lanscan/pkg/scanner"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+)
+
+func TestDeviceResult(t *testing.T) {
+	t.Run("is serializable", func(st *testing.T) {
+		mac, _ := net.ParseMAC("00:00:00:00:00:00")
+		result := &core.DeviceResult{
+			IP:     net.ParseIP("127.0.0.1"),
+			MAC:    mac,
+			Vendor: "unknown",
+			Status: scanner.StatusOnline,
+			OpenPorts: []scanner.Port{
+				{
+					ID:      22,
+					Service: "ssh",
+					Status:  scanner.PortOpen,
+				},
+			},
+		}
+
+		serializable := result.Serializable()
+
+		serialized, err := json.Marshal(serializable)
+
+		assert.NoError(st, err)
+
+		resultMap := map[string]interface{}{}
+
+		err = json.Unmarshal(serialized, &resultMap)
+
+		assert.NoError(st, err)
+
+		openPorts := resultMap["openPorts"].([]interface{})
+		port := openPorts[0].(map[string]interface{})
+
+		assert.Equal(st, resultMap["ip"], result.IP.String())
+		assert.Equal(st, resultMap["mac"], result.MAC.String())
+		assert.Equal(st, resultMap["vendor"], result.Vendor)
+		assert.Equal(st, resultMap["status"], string(result.Status))
+		assert.Equal(st, port["id"], float64(22))
+		assert.Equal(st, port["service"], "ssh")
+		assert.Equal(st, port["status"], string(scanner.PortOpen))
+
+	})
+}
+
+func TestResults(t *testing.T) {
+	t.Run("converts to serializable then marshals json", func(st *testing.T) {
+		mac, _ := net.ParseMAC("00:00:00:00:00:00")
+		deviceResult := &core.DeviceResult{
+			IP:     net.ParseIP("127.0.0.1"),
+			MAC:    mac,
+			Vendor: "unknown",
+			Status: scanner.StatusOnline,
+			OpenPorts: []scanner.Port{
+				{
+					ID:      22,
+					Service: "ssh",
+					Status:  scanner.PortOpen,
+				},
+			},
+		}
+
+		results := &core.Results{
+			Devices:   []*core.DeviceResult{deviceResult},
+			DeviceMux: sync.Mutex{},
+		}
+
+		data, err := results.MarshalJSON()
+
+		assert.NoError(st, err)
+
+		assert.NotNil(st, data)
+
+		unmarshalResults := []interface{}{}
+
+		err = json.Unmarshal(data, &unmarshalResults)
+
+		assert.NoError(st, err)
+
+		device := unmarshalResults[0].(map[string]interface{})
+
+		openPorts := device["openPorts"].([]interface{})
+		port := openPorts[0].(map[string]interface{})
+
+		assert.Equal(st, device["ip"], deviceResult.IP.String())
+		assert.Equal(st, device["mac"], deviceResult.MAC.String())
+		assert.Equal(st, device["vendor"], deviceResult.Vendor)
+		assert.Equal(st, device["status"], string(deviceResult.Status))
+		assert.Equal(st, port["id"], float64(22))
+		assert.Equal(st, port["service"], "ssh")
+		assert.Equal(st, port["status"], string(scanner.PortOpen))
+	})
+}
+
+func TestCore(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	defer ctrl.Finish()
+
+	t.Run("initializes", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+
+		runner := core.New()
+
+		runner.Initialize(
+			mockScanner,
+			make(chan *scanner.ScanResult),
+			1,
+			1,
+			false,
+			false,
+			false,
+		)
+	})
+
+	t.Run("initialization disables logging when noProgress is true", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		runner.Initialize(
+			mockScanner,
+			make(chan *scanner.ScanResult),
+			1,
+			1,
+			true,
+			true,
+			true,
+		)
+	})
+}

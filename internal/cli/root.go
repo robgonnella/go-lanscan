@@ -4,11 +4,14 @@ package cli
 
 import (
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/robgonnella/go-lanscan/internal/core"
+	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/scanner"
 	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
@@ -55,18 +58,63 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 				targets = []string{}
 			}
 
+			var scannerAccuracy scanner.Accuracy
+
+			switch strings.ToLower(accuracy) {
+			case "low":
+				scannerAccuracy = scanner.LOW_ACCURACY
+			case "medium":
+				scannerAccuracy = scanner.MEDIUM_ACCURACY
+			case "high":
+				scannerAccuracy = scanner.HIGH_ACCURACY
+			default:
+				scannerAccuracy = scanner.HIGH_ACCURACY
+			}
+
+			scanResults := make(chan *scanner.ScanResult)
+
+			var coreScanner scanner.Scanner
+
+			if arpOnly {
+				coreScanner = scanner.NewArpScanner(
+					targets,
+					userNet,
+					scanResults,
+					vendorRepo,
+					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
+					scanner.WithVendorInfo(vendorInfo),
+					scanner.WithAccuracy(scannerAccuracy),
+				)
+			} else {
+				coreScanner = scanner.NewFullScanner(
+					userNet,
+					targets,
+					portList,
+					listenPort,
+					scanResults,
+					vendorRepo,
+					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
+					scanner.WithVendorInfo(vendorInfo),
+					scanner.WithAccuracy(scannerAccuracy),
+				)
+			}
+
+			portLen := util.PortTotal(portList)
+
+			targetLen := util.TotalTargets(targets)
+
+			if targetLen == 0 {
+				targetLen = util.IPHostTotal(userNet.IPNet())
+			}
+
 			runner.Initialize(
-				accuracy,
-				targets,
-				userNet,
-				portList,
-				listenPort,
-				idleTimeoutSeconds,
+				coreScanner,
+				scanResults,
+				targetLen,
+				portLen,
 				noProgress,
-				printJson,
-				vendorInfo,
 				arpOnly,
-				vendorRepo,
+				printJson,
 			)
 
 			return runner.Run()
