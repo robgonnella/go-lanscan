@@ -45,8 +45,7 @@ func (r *DeviceResult) Serializable() interface{} {
 }
 
 type Results struct {
-	Devices   []*DeviceResult `json:"devices"`
-	DeviceMux sync.Mutex
+	Devices []*DeviceResult `json:"devices"`
 }
 
 func (r *Results) MarshalJSON() ([]byte, error) {
@@ -71,11 +70,13 @@ type Core struct {
 	scanResults chan *scanner.ScanResult
 	errorChan   chan error
 	scanner     scanner.Scanner
+	mux         *sync.RWMutex
 	log         logger.Logger
 }
 
 func New() *Core {
 	return &Core{
+		mux: &sync.RWMutex{},
 		log: logger.New(),
 	}
 }
@@ -92,8 +93,7 @@ func (c *Core) Initialize(
 	pw := progressWriter()
 
 	results := &Results{
-		Devices:   []*DeviceResult{},
-		DeviceMux: sync.Mutex{},
+		Devices: []*DeviceResult{},
 	}
 
 	arpTracker := tracker(pw, "starting arp scan", true)
@@ -164,8 +164,8 @@ OUTER:
 }
 
 func (c *Core) processSynResult(result *scanner.SynScanResult) {
-	c.results.DeviceMux.Lock()
-	defer c.results.DeviceMux.Unlock()
+	c.mux.Lock()
+	defer c.mux.Unlock()
 
 	targetIdx := slices.IndexFunc(c.results.Devices, func(r *DeviceResult) bool {
 		return r.IP.Equal(result.IP)
@@ -201,15 +201,12 @@ func (c *Core) processSynResult(result *scanner.SynScanResult) {
 }
 
 func (c *Core) processSynDone() {
-	c.results.DeviceMux.Lock()
-	defer c.results.DeviceMux.Unlock()
-
 	c.printSynResults()
 }
 
 func (c *Core) processArpResult(result *scanner.ArpScanResult) {
-	c.results.DeviceMux.Lock()
-	defer c.results.DeviceMux.Unlock()
+	c.mux.Lock()
+	defer c.mux.Unlock()
 
 	targetIdx := slices.IndexFunc(c.results.Devices, func(r *DeviceResult) bool {
 		return r.IP.Equal(result.IP)
@@ -234,9 +231,6 @@ func (c *Core) processArpDone() {
 	if c.arpOnly {
 		return
 	}
-
-	c.results.DeviceMux.Lock()
-	defer c.results.DeviceMux.Unlock()
 
 	if !c.noProgress {
 		c.printArpResults()
@@ -295,6 +289,9 @@ func (c *Core) requestCallback(r *scanner.Request) {
 }
 
 func (c *Core) printArpResults() {
+	c.mux.RLock()
+	defer c.mux.RUnlock()
+
 	if c.printJson {
 		data, err := c.results.MarshalJSON()
 
@@ -320,6 +317,9 @@ func (c *Core) printArpResults() {
 }
 
 func (c *Core) printSynResults() {
+	c.mux.RLock()
+	defer c.mux.RUnlock()
+
 	if c.printJson {
 		data, err := c.results.MarshalJSON()
 

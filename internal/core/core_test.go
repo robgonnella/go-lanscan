@@ -2,9 +2,10 @@ package core_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/robgonnella/go-lanscan/internal/core"
 	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
@@ -74,8 +75,7 @@ func TestResults(t *testing.T) {
 		}
 
 		results := &core.Results{
-			Devices:   []*core.DeviceResult{deviceResult},
-			DeviceMux: sync.Mutex{},
+			Devices: []*core.DeviceResult{deviceResult},
 		}
 
 		data, err := results.MarshalJSON()
@@ -142,5 +142,353 @@ func TestCore(t *testing.T) {
 			true,
 			true,
 		)
+	})
+
+	t.Run("handles scanner error", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			return errors.New("mock scanner error")
+		})
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			false,
+			true,
+			false,
+		)
+
+		err := runner.Run()
+
+		assert.Error(st, err)
+	})
+
+	t.Run("performs arp only scan and prints text table", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPResult,
+				Payload: &scanner.ArpScanResult{
+					IP:     net.ParseIP("172.17.0.1"),
+					MAC:    mac,
+					Vendor: "Apple",
+				},
+			}
+			time.AfterFunc(time.Second, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPDone,
+				}
+			})
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			false,
+			true,
+			false,
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("performs arp only scan and prints json", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPResult,
+				Payload: &scanner.ArpScanResult{
+					IP:     net.ParseIP("172.17.0.1"),
+					MAC:    mac,
+					Vendor: "Apple",
+				},
+			}
+			time.AfterFunc(time.Second, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPDone,
+				}
+			})
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			false,
+			true,
+			true,
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("performs arp only scan and silences output", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPResult,
+				Payload: &scanner.ArpScanResult{
+					IP:     net.ParseIP("172.17.0.1"),
+					MAC:    mac,
+					Vendor: "Apple",
+				},
+			}
+			time.AfterFunc(time.Second, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPDone,
+				}
+			})
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			true,
+			true,
+			true,
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("performs syn scan and prints text table", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			ip := net.ParseIP("172.17.0.1")
+			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPResult,
+				Payload: &scanner.ArpScanResult{
+					IP:     ip,
+					MAC:    mac,
+					Vendor: "Apple",
+				},
+			}
+			time.AfterFunc(time.Second, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPDone,
+				}
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.SYNResult,
+					Payload: &scanner.SynScanResult{
+						IP:     ip,
+						MAC:    mac,
+						Status: scanner.StatusOnline,
+						Port: scanner.Port{
+							ID:      22,
+							Service: "ssh",
+							Status:  scanner.PortOpen,
+						},
+					},
+				}
+			})
+			time.AfterFunc(time.Second*2, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.SYNDone,
+				}
+			})
+
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			false,
+			false,
+			false,
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("performs syn scan and prints json", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			ip := net.ParseIP("172.17.0.1")
+			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPResult,
+				Payload: &scanner.ArpScanResult{
+					IP:     ip,
+					MAC:    mac,
+					Vendor: "Apple",
+				},
+			}
+			time.AfterFunc(time.Second, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPDone,
+				}
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.SYNResult,
+					Payload: &scanner.SynScanResult{
+						IP:     ip,
+						MAC:    mac,
+						Status: scanner.StatusOnline,
+						Port: scanner.Port{
+							ID:      22,
+							Service: "ssh",
+							Status:  scanner.PortOpen,
+						},
+					},
+				}
+			})
+			time.AfterFunc(time.Second*2, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.SYNDone,
+				}
+			})
+
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			false,
+			false,
+			true,
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("performs syn scan silences output", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			ip := net.ParseIP("172.17.0.1")
+			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPResult,
+				Payload: &scanner.ArpScanResult{
+					IP:     ip,
+					MAC:    mac,
+					Vendor: "Apple",
+				},
+			}
+			time.AfterFunc(time.Second, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPDone,
+				}
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.SYNResult,
+					Payload: &scanner.SynScanResult{
+						IP:     ip,
+						MAC:    mac,
+						Status: scanner.StatusOnline,
+						Port: scanner.Port{
+							ID:      22,
+							Service: "ssh",
+							Status:  scanner.PortOpen,
+						},
+					},
+				}
+			})
+			time.AfterFunc(time.Second*2, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.SYNDone,
+				}
+			})
+
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			scanResults,
+			1,
+			1,
+			true,
+			false,
+			true,
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
 	})
 }
