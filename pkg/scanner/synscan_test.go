@@ -9,6 +9,7 @@ import (
 	"github.com/google/gopacket"
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
 	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
+	test_helper "github.com/robgonnella/go-lanscan/pkg/internal/test-helper"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -131,6 +132,8 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
+		listenPort := uint16(54321)
+
 		resultChan := make(chan *scanner.ScanResult)
 
 		synScanner := scanner.NewSynScanner(
@@ -143,7 +146,7 @@ func TestSynScanner(t *testing.T) {
 			},
 			netInfo,
 			[]string{"22"},
-			54321,
+			listenPort,
 			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
@@ -175,7 +178,11 @@ func TestSynScanner(t *testing.T) {
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
-			return []byte{}, gopacket.CaptureInfo{}, nil
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				net.ParseIP("172.17.1.1"),
+				3000,
+				listenPort,
+			)
 		})
 
 		err := synScanner.Scan()

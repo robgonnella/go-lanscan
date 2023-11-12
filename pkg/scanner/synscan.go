@@ -32,6 +32,7 @@ type SynScanner struct {
 	accuracy         time.Duration
 	scanningMux      *sync.RWMutex
 	packetSentAtMux  *sync.RWMutex
+	serviceQueryMux  *sync.Mutex
 }
 
 func NewSynScanner(
@@ -56,6 +57,7 @@ func NewSynScanner(
 		accuracy:         time.Millisecond,
 		scanningMux:      &sync.RWMutex{},
 		packetSentAtMux:  &sync.RWMutex{},
+		serviceQueryMux:  &sync.Mutex{},
 	}
 
 	for _, o := range options {
@@ -242,7 +244,9 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 	if tcp.SYN && tcp.ACK {
 		serviceName := ""
 
+		s.serviceQueryMux.Lock()
 		service := netdb.ServiceByPort(int(tcp.SrcPort), "")
+		s.serviceQueryMux.Unlock()
 
 		if service != nil {
 			serviceName = service.Name
