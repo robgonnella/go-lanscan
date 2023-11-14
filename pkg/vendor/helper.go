@@ -3,14 +3,8 @@
 package vendor
 
 import (
-	"errors"
-	"io"
-	"net/http"
 	"os"
 	"path"
-	"path/filepath"
-
-	"github.com/klauspost/oui"
 )
 
 func GetDefaultVendorRepo() (*OUIVendorRepo, error) {
@@ -20,19 +14,13 @@ func GetDefaultVendorRepo() (*OUIVendorRepo, error) {
 		return nil, err
 	}
 
-	if _, err := os.Stat(*ouiTxt); errors.Is(err, os.ErrNotExist) {
-		if err := UpdateStaticVendors(*ouiTxt); err != nil {
-			return nil, err
-		}
-	}
-
-	db, err := oui.OpenStaticFile(*ouiTxt)
+	repo, err := NewOUIVendorRepo(*ouiTxt)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return NewOUIVendorRepo(db), nil
+	return repo, nil
 }
 
 func GetDefaultOuiTxtPath() (*string, error) {
@@ -47,36 +35,4 @@ func GetDefaultOuiTxtPath() (*string, error) {
 	ouiTxt := path.Join(dir, "oui.txt")
 
 	return &ouiTxt, nil
-}
-
-func UpdateStaticVendors(ouiTxt string) error {
-	dir := filepath.Dir(ouiTxt)
-
-	if err := os.MkdirAll(dir, 0751); err != nil {
-		return err
-	}
-
-	resp, err := http.Get("https://standards-oui.ieee.org/oui/oui.txt")
-
-	if err != nil {
-		return err
-	}
-
-	data, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		return err
-	}
-
-	file, err := os.OpenFile(ouiTxt, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	_, err = file.Write(data)
-
-	return err
 }

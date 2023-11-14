@@ -3,32 +3,13 @@ package vendor_test
 import (
 	"net"
 	"os"
-	"path"
 	"testing"
 
 	"github.com/robgonnella/go-lanscan/pkg/vendor"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetDefaultOuiTxtPath(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-
-	assert.NoError(t, err)
-
-	confDir := path.Join(homeDir, ".config", "go-lanscan")
-
-	ouiTxt := path.Join(confDir, "oui.txt")
-
-	t.Run("returns default oui.txt path", func(st *testing.T) {
-		filePath, err := vendor.GetDefaultOuiTxtPath()
-
-		assert.NoError(st, err)
-
-		assert.Equal(st, ouiTxt, *filePath)
-	})
-}
-
-func TestUpdateStaticVendors(t *testing.T) {
+func TestUpdateVendors(t *testing.T) {
 	ouiTxt := "oui.txt"
 
 	reset := func() error {
@@ -40,9 +21,14 @@ func TestUpdateStaticVendors(t *testing.T) {
 		defer reset()
 
 		_, err := os.Stat(ouiTxt)
+
 		assert.True(st, os.IsNotExist(err))
 
-		err = vendor.UpdateStaticVendors(ouiTxt)
+		repo, err := vendor.NewOUIVendorRepo(ouiTxt)
+
+		assert.NoError(st, err)
+
+		err = repo.UpdateVendors()
 
 		assert.NoError(st, err)
 
@@ -55,14 +41,23 @@ func TestUpdateStaticVendors(t *testing.T) {
 }
 
 func TestQueryVendor(t *testing.T) {
+	ouiTxt := "oui2.txt"
+
+	reset := func() error {
+		return os.RemoveAll(ouiTxt)
+	}
+
+	reset()
+	defer reset()
+
+	repo, err := vendor.NewOUIVendorRepo(ouiTxt)
+
+	assert.NoError(t, err)
+
 	t.Run("queries and finds vendor", func(st *testing.T) {
 		hw, err := net.ParseMAC("00-00-0C-CC-CC-CC")
 
 		assert.NoError(t, err)
-
-		repo, err := vendor.GetDefaultVendorRepo()
-
-		assert.NoError(st, err)
 
 		v, err := repo.Query(hw)
 
@@ -75,10 +70,6 @@ func TestQueryVendor(t *testing.T) {
 		hw, err := net.ParseMAC("ff-ff-ff-ff-ff-ff")
 
 		assert.NoError(t, err)
-
-		repo, err := vendor.GetDefaultVendorRepo()
-
-		assert.NoError(st, err)
 
 		v, err := repo.Query(hw)
 

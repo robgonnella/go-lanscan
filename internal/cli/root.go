@@ -15,7 +15,11 @@ import (
 	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
-func Root(runner core.Runner) (*cobra.Command, error) {
+func Root(
+	runner core.Runner,
+	userNet network.Network,
+	vendorRepo vendor.VendorRepo,
+) (*cobra.Command, error) {
 	var printJson bool
 	var noProgress bool
 	var ports string
@@ -27,31 +31,21 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 	var accuracy string
 	var arpOnly bool
 
-	userNet, err := network.NewDefaultNetwork()
-
-	if err != nil {
-		return nil, err
-	}
-
 	cmd := &cobra.Command{
 		Use:   "go-lanscan",
 		Short: "Scan your LAN!",
 		Long:  `CLI to scan your Local Area Network`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			vendorRepo, err := vendor.GetDefaultVendorRepo()
-
-			if err != nil {
-				return err
-			}
-
 			portList := strings.Split(ports, ",")
 
 			if ifaceName != userNet.Interface().Name {
-				userNet, err = network.NewNetworkFromInterfaceName(ifaceName)
+				uNet, err := network.NewNetworkFromInterfaceName(ifaceName)
 
 				if err != nil {
 					return err
 				}
+
+				userNet = uNet
 			}
 
 			if len(targets) == 1 && targets[0] == userNet.Cidr() {
@@ -133,7 +127,7 @@ func Root(runner core.Runner) (*cobra.Command, error) {
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 
 	cmd.AddCommand(newVersion())
-	cmd.AddCommand(newUpdateVendors())
+	cmd.AddCommand(newUpdateVendors(vendorRepo))
 
 	return cmd, nil
 }

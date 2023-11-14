@@ -3,10 +3,13 @@
 package cli_test
 
 import (
+	"net"
 	"testing"
 
 	"github.com/robgonnella/go-lanscan/internal/cli"
 	mock_core "github.com/robgonnella/go-lanscan/internal/mock/core"
+	mock_network "github.com/robgonnella/go-lanscan/mock/network"
+	mock_vendor "github.com/robgonnella/go-lanscan/mock/vendor"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -16,7 +19,26 @@ func TestRootCommand(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("initializes high accuracy and runs", func(st *testing.T) {
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
+
 		mockRunner := mock_core.NewMockRunner(ctrl)
+
+		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
+
+		mockCidr := "172.17.1.1/32"
+
+		_, mockIPNet, _ := net.ParseCIDR(mockCidr)
+
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
@@ -30,7 +52,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner.EXPECT().Run().Return(nil)
 
-		cmd, err := cli.Root(mockRunner)
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
 
 		assert.NoError(st, err)
 
@@ -42,7 +64,26 @@ func TestRootCommand(t *testing.T) {
 	})
 
 	t.Run("initializes medium accuracy and runs", func(st *testing.T) {
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
+
 		mockRunner := mock_core.NewMockRunner(ctrl)
+
+		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
+
+		mockCidr := "172.17.1.1/32"
+
+		_, mockIPNet, _ := net.ParseCIDR(mockCidr)
+
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
@@ -56,7 +97,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner.EXPECT().Run().Return(nil)
 
-		cmd, err := cli.Root(mockRunner)
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
 
 		assert.NoError(st, err)
 
@@ -76,7 +117,26 @@ func TestRootCommand(t *testing.T) {
 	})
 
 	t.Run("initializes low accuracy and runs", func(st *testing.T) {
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
+
 		mockRunner := mock_core.NewMockRunner(ctrl)
+
+		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
+
+		mockCidr := "172.17.1.1/32"
+
+		_, mockIPNet, _ := net.ParseCIDR(mockCidr)
+
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
@@ -90,7 +150,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner.EXPECT().Run().Return(nil)
 
-		cmd, err := cli.Root(mockRunner)
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
 
 		assert.NoError(st, err)
 
@@ -105,7 +165,26 @@ func TestRootCommand(t *testing.T) {
 	})
 
 	t.Run("initializes unknown accuracy and runs", func(st *testing.T) {
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
+
 		mockRunner := mock_core.NewMockRunner(ctrl)
+
+		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
+
+		mockCidr := "172.17.1.1/32"
+
+		_, mockIPNet, _ := net.ParseCIDR(mockCidr)
+
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
@@ -119,7 +198,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner.EXPECT().Run().Return(nil)
 
-		cmd, err := cli.Root(mockRunner)
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
 
 		assert.NoError(st, err)
 
@@ -138,9 +217,24 @@ func TestRootCommand(t *testing.T) {
 	})
 
 	t.Run("gets provided fake interface and returns error", func(st *testing.T) {
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
+
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		cmd, err := cli.Root(mockRunner)
+		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
+
+		mockCidr := "172.17.1.1/32"
+
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
 
 		assert.NoError(st, err)
 

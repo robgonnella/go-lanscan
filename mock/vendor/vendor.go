@@ -53,3 +53,17 @@ func (mr *MockVendorRepoMockRecorder) Query(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockVendorRepo)(nil).Query), arg0)
 }
+
+// UpdateVendors mocks base method.
+func (m *MockVendorRepo) UpdateVendors() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVendors")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateVendors indicates an expected call of UpdateVendors.
+func (mr *MockVendorRepoMockRecorder) UpdateVendors() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVendors", reflect.TypeOf((*MockVendorRepo)(nil).UpdateVendors))
+}

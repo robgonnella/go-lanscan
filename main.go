@@ -6,14 +6,28 @@ import (
 	"github.com/robgonnella/go-lanscan/internal/cli"
 	"github.com/robgonnella/go-lanscan/internal/core"
 	"github.com/robgonnella/go-lanscan/internal/logger"
+	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
 func main() {
 	log := logger.New()
 
+	userNet, err := network.NewDefaultNetwork()
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to find default network")
+	}
+
+	vendorRepo, err := vendor.GetDefaultVendorRepo()
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize vendor repo")
+	}
+
 	runner := core.New()
 
-	cmd, err := cli.Root(runner)
+	cmd, err := cli.Root(runner, userNet, vendorRepo)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize cli")

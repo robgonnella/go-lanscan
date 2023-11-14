@@ -3,28 +3,43 @@
 package cli_test
 
 import (
-	"os"
+	"net"
 	"testing"
 
 	"github.com/robgonnella/go-lanscan/internal/cli"
-	"github.com/robgonnella/go-lanscan/internal/core"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
+	mock_core "github.com/robgonnella/go-lanscan/internal/mock/core"
+	mock_network "github.com/robgonnella/go-lanscan/mock/network"
+	mock_vendor "github.com/robgonnella/go-lanscan/mock/vendor"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestUpdatesVendorsCommand(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	defer ctrl.Finish()
+
 	t.Run("updates static vendor file", func(st *testing.T) {
-		runner := core.New()
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
 
-		ouiTxt, err := vendor.GetDefaultOuiTxtPath()
+		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		assert.NoError(st, err)
+		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
 
-		err = os.RemoveAll(*ouiTxt)
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
 
-		assert.NoError(st, err)
+		mockCidr := "172.17.1.1/32"
 
-		cmd, err := cli.Root(runner)
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		mockVendor.EXPECT().UpdateVendors()
+
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
 
 		assert.NoError(st, err)
 
@@ -33,11 +48,5 @@ func TestUpdatesVendorsCommand(t *testing.T) {
 		err = cmd.Execute()
 
 		assert.NoError(st, err)
-
-		info, err := os.Stat(*ouiTxt)
-
-		assert.NoError(st, err)
-
-		assert.False(st, info.IsDir())
 	})
 }

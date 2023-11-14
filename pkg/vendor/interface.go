@@ -1,6 +1,8 @@
 package vendor
 
-import "net"
+import (
+	"net"
+)
 
 //go:generate mockgen -destination=../../mock/vendor/vendor.go -package=mock_vendor . VendorRepo
 
@@ -9,5 +11,6 @@ type VendorResult struct {
 }
 
 type VendorRepo interface {
+	UpdateVendors() error
 	Query(mac net.HardwareAddr) (*VendorResult, error)
 }
