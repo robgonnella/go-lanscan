@@ -32,6 +32,9 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+
 		resultChan := make(chan *scanner.ScanResult)
 
 		synScanner := scanner.NewSynScanner(
@@ -48,10 +51,6 @@ func TestSynScanner(t *testing.T) {
 			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
@@ -83,6 +82,8 @@ func TestSynScanner(t *testing.T) {
 
 		err := synScanner.Scan()
 
+		wg.Wait()
+
 		assert.NoError(st, err)
 	})
 
@@ -109,10 +110,6 @@ func TestSynScanner(t *testing.T) {
 
 		mockErr := errors.New("mock open-live error")
 
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
-
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 
 		cap.EXPECT().OpenLive(
@@ -127,10 +124,167 @@ func TestSynScanner(t *testing.T) {
 		assert.ErrorIs(st, mockErr, err)
 	})
 
+	t.Run("returns error if SetBPFFilter returns error", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		synScanner := scanner.NewSynScanner(
+			[]*scanner.ArpScanResult{
+				{
+					IP:     net.ParseIP("172.17.1.1"),
+					MAC:    mockInterface.HardwareAddr,
+					Vendor: "unknown",
+				},
+			},
+			netInfo,
+			[]string{"22"},
+			54321,
+			resultChan,
+			scanner.WithPacketCapture(cap),
+		)
+
+		mockErr := errors.New("mock SetBPFFilter error")
+
+		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		handle.EXPECT().SetBPFFilter(gomock.Any()).Return(mockErr)
+
+		err := synScanner.Scan()
+
+		assert.Error(st, err)
+		assert.ErrorIs(st, mockErr, err)
+	})
+
+	t.Run("returns error if WritePacketData returns error", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		synScanner := scanner.NewSynScanner(
+			[]*scanner.ArpScanResult{
+				{
+					IP:     net.ParseIP("172.17.1.1"),
+					MAC:    mockInterface.HardwareAddr,
+					Vendor: "unknown",
+				},
+			},
+			netInfo,
+			[]string{"22"},
+			54321,
+			resultChan,
+			scanner.WithPacketCapture(cap),
+		)
+
+		mockErr := errors.New("mock WritePacketData error")
+
+		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().UserIP().Return(mockUserIP)
+
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		handle.EXPECT().SetBPFFilter(gomock.Any())
+		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		handle.EXPECT().Close().AnyTimes()
+
+		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
+			return mockErr
+		})
+
+		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				net.ParseIP("172.17.1.1"),
+				3000,
+				54321,
+			)
+		})
+
+		err := synScanner.Scan()
+
+		assert.Error(st, err)
+		assert.ErrorIs(st, mockErr, err)
+	})
+
+	t.Run("returns error if SerializeLayers returns error", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		synScanner := scanner.NewSynScanner(
+			[]*scanner.ArpScanResult{
+				{
+					IP:     net.ParseIP("172.17.1.1"),
+					MAC:    mockInterface.HardwareAddr,
+					Vendor: "unknown",
+				},
+			},
+			netInfo,
+			[]string{"22"},
+			54321,
+			resultChan,
+			scanner.WithPacketCapture(cap),
+		)
+
+		mockErr := errors.New("mock SerializeLayers error")
+
+		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().UserIP().Return(mockUserIP)
+
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		handle.EXPECT().SetBPFFilter(gomock.Any())
+
+		cap.EXPECT().SerializeLayers(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+		).
+			AnyTimes().
+			Return(mockErr)
+
+		handle.EXPECT().Close().AnyTimes()
+
+		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				net.ParseIP("172.17.1.1"),
+				3000,
+				54321,
+			)
+		})
+
+		err := synScanner.Scan()
+
+		assert.Error(st, err)
+		assert.ErrorIs(st, mockErr, err)
+	})
+
 	t.Run("performs syn scan ", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
 
 		listenPort := uint16(54321)
 
@@ -151,9 +305,133 @@ func TestSynScanner(t *testing.T) {
 			scanner.WithPacketCapture(cap),
 		)
 
-		wg := sync.WaitGroup{}
+		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		handle.EXPECT().SetBPFFilter(gomock.Any())
+		handle.EXPECT().Close().AnyTimes()
+
+		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
+			defer func() {
+				synScanner.Stop()
+				wg.Done()
+			}()
+			return nil
+		})
+
+		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				net.ParseIP("172.17.1.1"),
+				22,
+				listenPort,
+			)
+		})
+
+		err := synScanner.Scan()
+
+		wg.Wait()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("ignores packet from unexpected target ", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		wg := sync.WaitGroup{}
 		wg.Add(1)
+
+		listenPort := uint16(54321)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		synScanner := scanner.NewSynScanner(
+			[]*scanner.ArpScanResult{
+				{
+					IP:     net.ParseIP("172.17.1.1"),
+					MAC:    mockInterface.HardwareAddr,
+					Vendor: "unknown",
+				},
+			},
+			netInfo,
+			[]string{"22"},
+			listenPort,
+			resultChan,
+			scanner.WithPacketCapture(cap),
+		)
+
+		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().UserIP().Return(mockUserIP)
+
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		handle.EXPECT().SetBPFFilter(gomock.Any())
+		handle.EXPECT().Close().AnyTimes()
+
+		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
+			defer func() {
+				synScanner.Stop()
+				wg.Done()
+			}()
+			return nil
+		})
+
+		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				net.ParseIP("192.168.22.1"),
+				3000,
+				listenPort,
+			)
+		})
+
+		err := synScanner.Scan()
+
+		wg.Wait()
+
+		assert.NoError(st, err)
+	})
+
+	t.Run("ignores packet that have wrong destination port", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+
+		listenPort := uint16(54321)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		synScanner := scanner.NewSynScanner(
+			[]*scanner.ArpScanResult{
+				{
+					IP:     net.ParseIP("172.17.1.1"),
+					MAC:    mockInterface.HardwareAddr,
+					Vendor: "unknown",
+				},
+			},
+			netInfo,
+			[]string{"22"},
+			listenPort,
+			resultChan,
+			scanner.WithPacketCapture(cap),
+		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
@@ -181,12 +459,87 @@ func TestSynScanner(t *testing.T) {
 			return test_helper.NewSynWithAckResponsePacketBytes(
 				net.ParseIP("172.17.1.1"),
 				3000,
-				listenPort,
+				54322,
 			)
 		})
 
 		err := synScanner.Scan()
 
+		wg.Wait()
+
 		assert.NoError(st, err)
+	})
+
+	t.Run("calls notification callback", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		netInfo := mock_network.NewMockNetwork(ctrl)
+		callbackCalled := false
+
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+
+		callback := func(req *scanner.Request) {
+			callbackCalled = true
+			wg.Done()
+		}
+
+		listenPort := uint16(54321)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		synScanner := scanner.NewSynScanner(
+			[]*scanner.ArpScanResult{
+				{
+					IP:     net.ParseIP("172.17.1.1"),
+					MAC:    mockInterface.HardwareAddr,
+					Vendor: "unknown",
+				},
+			},
+			netInfo,
+			[]string{"22"},
+			listenPort,
+			resultChan,
+			scanner.WithPacketCapture(cap),
+			scanner.WithRequestNotifications(callback),
+		)
+
+		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().UserIP().Return(mockUserIP)
+
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		handle.EXPECT().SetBPFFilter(gomock.Any())
+		handle.EXPECT().Close().AnyTimes()
+
+		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
+			defer func() {
+				synScanner.Stop()
+				wg.Done()
+			}()
+			return nil
+		})
+
+		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				net.ParseIP("172.17.1.1"),
+				3000,
+				54322,
+			)
+		})
+
+		err := synScanner.Scan()
+
+		wg.Wait()
+
+		assert.NoError(st, err)
+
+		assert.True(st, callbackCalled)
 	})
 }
