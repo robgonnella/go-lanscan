@@ -64,21 +64,23 @@ func (r *OUIVendorRepo) UpdateVendors() error {
 }
 
 func (r *OUIVendorRepo) Query(mac net.HardwareAddr) (*VendorResult, error) {
+	result := &VendorResult{
+		Name: "unknown",
+	}
+
 	entry, err := r.db.Query(strings.ReplaceAll(mac.String(), ":", "-"))
+
+	if errors.Is(err, oui.ErrNotFound) {
+		return result, nil
+	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	name := entry.Manufacturer
+	result.Name = entry.Manufacturer
 
-	if name == "" {
-		name = "unknown"
-	}
-
-	return &VendorResult{
-		Name: name,
-	}, nil
+	return result, nil
 }
 
 func (r *OUIVendorRepo) loadDatabase() error {

@@ -66,10 +66,20 @@ func TestQueryVendor(t *testing.T) {
 		assert.Equal(st, v.Name, "Cisco Systems, Inc")
 	})
 
-	t.Run("returns error", func(st *testing.T) {
-		hw, err := net.ParseMAC("ff-ff-ff-ff-ff-ff")
+	t.Run("returns unknown if not found", func(st *testing.T) {
+		hw, err := net.ParseMAC("71-FF-D5-A6-EB-41")
 
 		assert.NoError(t, err)
+
+		v, err := repo.Query(hw)
+
+		assert.NoError(st, err)
+
+		assert.Equal(st, v.Name, "unknown")
+	})
+
+	t.Run("returns error", func(st *testing.T) {
+		hw := net.HardwareAddr{}
 
 		v, err := repo.Query(hw)
 
