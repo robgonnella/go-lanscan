@@ -67,12 +67,11 @@ func (mr *MockNetworkMockRecorder) Gateway() *gomock.Call {
 }
 
 // Hostname mocks base method.
-func (m *MockNetwork) Hostname() (*string, error) {
+func (m *MockNetwork) Hostname() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Hostname")
-	ret0, _ := ret[0].(*string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(string)
+	return ret0
 }
 
 // Hostname indicates an expected call of Hostname.

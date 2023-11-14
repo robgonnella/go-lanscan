@@ -29,11 +29,11 @@ func TestDefaultUserNetwork(t *testing.T) {
 
 		assert.NoError(st, err)
 
-		hostName, err := userNet.Hostname()
+		hostName := userNet.Hostname()
 
 		assert.NoError(st, err)
 
-		assert.Equal(st, expectedHostname, *hostName)
+		assert.Equal(st, expectedHostname, hostName)
 	})
 
 	t.Run("gets gateway", func(st *testing.T) {
@@ -88,11 +88,11 @@ func TestGetNetworkInfoFromInterface(t *testing.T) {
 
 			assert.NoError(st, err)
 
-			hostName, err := userNet.Hostname()
+			hostName := userNet.Hostname()
 
 			assert.NoError(st, err)
 
-			assert.Equal(st, expectedHostname, *hostName)
+			assert.Equal(st, expectedHostname, hostName)
 		})
 
 		st.Run("gets gateway", func(st *testing.T) {
@@ -167,11 +167,11 @@ func TestGetNetworkInfoFromInterface(t *testing.T) {
 
 			assert.NoError(st, err)
 
-			hostName, err := userNet.Hostname()
+			hostName := userNet.Hostname()
 
 			assert.NoError(st, err)
 
-			assert.Equal(st, expectedHostname, *hostName)
+			assert.Equal(st, expectedHostname, hostName)
 		})
 
 		st.Run("gets gateway", func(st *testing.T) {

@@ -4,7 +4,6 @@ package scanner
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"slices"
 	"sync"
@@ -16,8 +15,7 @@ import (
 )
 
 type FullScanner struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
+	stop                chan struct{}
 	targets             []string
 	ports               []string
 	listenPort          uint16
@@ -53,11 +51,8 @@ func NewFullScanner(
 		options...,
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
 	scanner := &FullScanner{
-		ctx:                 ctx,
-		cancel:              cancel,
+		stop:                make(chan struct{}),
 		netInfo:             netInfo,
 		targets:             targets,
 		listenPort:          listenPort,
@@ -102,7 +97,8 @@ func (s *FullScanner) Scan() error {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.stop:
+			s.stop <- struct{}{}
 			return nil
 		case r := <-s.internalScanResults:
 			switch r.Type {
@@ -129,8 +125,9 @@ func (s *FullScanner) Scan() error {
 }
 
 func (s *FullScanner) Stop() {
-	s.cancel()
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.stop <- struct{}{}
+
+	<-s.stop
 
 	s.deviceMux.Lock()
 	defer s.deviceMux.Unlock()

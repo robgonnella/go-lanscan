@@ -9,6 +9,7 @@ import (
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
 	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
 	mock_vendor "github.com/robgonnella/go-lanscan/mock/vendor"
+	test_helper "github.com/robgonnella/go-lanscan/pkg/internal/test-helper"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -21,7 +22,7 @@ func TestFullScanner(t *testing.T) {
 
 	mockInterface := &net.Interface{
 		Name:         "interfaceName",
-		HardwareAddr: net.HardwareAddr{},
+		HardwareAddr: net.HardwareAddr([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
 	}
 
 	_, mockIPNet, _ := net.ParseCIDR("172.17.1.1/32")
@@ -81,6 +82,8 @@ func TestFullScanner(t *testing.T) {
 
 		err := fullScanner.Scan()
 
+		wg.Wait()
+
 		assert.NoError(st, err)
 	})
 
@@ -89,6 +92,8 @@ func TestFullScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		vendorRepo := mock_vendor.NewMockVendorRepo(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		sentArpResult := false
 
 		resultChan := make(chan *scanner.ScanResult)
 
@@ -106,33 +111,52 @@ func TestFullScanner(t *testing.T) {
 
 		wg.Add(1)
 
-		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
-		netInfo.EXPECT().IPNet().Return(mockIPNet)
-		netInfo.EXPECT().UserIP().Return(mockUserIP)
+		netInfo.EXPECT().Interface().Return(mockInterface).AnyTimes()
+		netInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
+		netInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
-			gomock.Any()).Return(handle, nil)
+			gomock.Any()).Return(handle, nil).AnyTimes()
 
+		handle.EXPECT().SetBPFFilter(gomock.Any()).AnyTimes()
 		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				fullScanner.Stop()
-				wg.Done()
-			}()
 			return nil
-		})
+		}).AnyTimes()
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
-			return []byte{}, gopacket.CaptureInfo{}, nil
+			if !sentArpResult {
+				sentArpResult = true
+				return test_helper.NewArpReplyReadResult(
+					mockUserIP,
+					[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+				)
+			}
+
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				mockUserIP,
+				3000,
+				54321,
+			)
 		})
 
+		go func() {
+			for res := range resultChan {
+				if res.Type == scanner.SYNDone {
+					wg.Done()
+				}
+			}
+		}()
+
 		err := fullScanner.Scan()
+
+		wg.Wait()
 
 		assert.NoError(st, err)
 	})
@@ -142,6 +166,8 @@ func TestFullScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		vendorRepo := mock_vendor.NewMockVendorRepo(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+
+		sentArpResult := false
 
 		resultChan := make(chan *scanner.ScanResult)
 
@@ -159,32 +185,52 @@ func TestFullScanner(t *testing.T) {
 
 		wg.Add(1)
 
-		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
-		netInfo.EXPECT().UserIP().Return(mockUserIP)
+		netInfo.EXPECT().Interface().Return(mockInterface).AnyTimes()
+		netInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
+		netInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
-			gomock.Any()).Return(handle, nil)
+			gomock.Any()).Return(handle, nil).AnyTimes()
 
+		handle.EXPECT().SetBPFFilter(gomock.Any()).AnyTimes()
 		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				fullScanner.Stop()
-				wg.Done()
-			}()
 			return nil
-		})
+		}).AnyTimes()
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
-			return []byte{}, gopacket.CaptureInfo{}, nil
+			if !sentArpResult {
+				sentArpResult = true
+				return test_helper.NewArpReplyReadResult(
+					mockUserIP,
+					[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+				)
+			}
+
+			return test_helper.NewSynWithAckResponsePacketBytes(
+				mockUserIP,
+				3000,
+				54321,
+			)
 		})
 
+		go func() {
+			for res := range resultChan {
+				if res.Type == scanner.SYNDone {
+					wg.Done()
+				}
+			}
+		}()
+
 		err := fullScanner.Scan()
+
+		wg.Wait()
 
 		assert.NoError(st, err)
 	})

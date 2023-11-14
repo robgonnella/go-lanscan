@@ -325,7 +325,7 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
 			return test_helper.NewArpReplyReadResult(
 				mockNonIncludedArpSrcIP,
-				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // scanning host hw address
 			)
 		})
 

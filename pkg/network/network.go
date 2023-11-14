@@ -4,7 +4,6 @@ package network
 
 import (
 	"net"
-	"os"
 )
 
 type UserNetwork struct {
@@ -50,14 +49,8 @@ func NewNetworkFromInterfaceName(interfaceName string) (*UserNetwork, error) {
 	}, nil
 }
 
-func (n *UserNetwork) Hostname() (*string, error) {
-	hostname, err := os.Hostname()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &hostname, nil
+func (n *UserNetwork) Hostname() string {
+	return n.hostname
 }
 
 func (n *UserNetwork) Gateway() net.IP {
