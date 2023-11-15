@@ -183,6 +183,7 @@ func TestCore(t *testing.T) {
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
 			scanResults <- &scanner.ScanResult{
 				Type: scanner.ARPResult,
 				Payload: &scanner.ArpScanResult{
@@ -191,6 +192,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
+
 			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
@@ -227,6 +229,7 @@ func TestCore(t *testing.T) {
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
 			scanResults <- &scanner.ScanResult{
 				Type: scanner.ARPResult,
 				Payload: &scanner.ArpScanResult{
@@ -235,6 +238,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
+
 			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
@@ -309,11 +313,22 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
-		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+		var callback func(r *scanner.Request)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(func(cb func(r *scanner.Request)) {
+			callback = cb
+		})
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			ip := net.ParseIP("172.17.0.1")
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
+			callback(&scanner.Request{
+				Type: scanner.SynRequest,
+				IP:   "172.17.0.1",
+				Port: 22,
+			})
+
 			scanResults <- &scanner.ScanResult{
 				Type: scanner.ARPResult,
 				Payload: &scanner.ArpScanResult{
@@ -322,10 +337,13 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
+
 			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -340,7 +358,7 @@ func TestCore(t *testing.T) {
 					},
 				}
 			})
-			time.AfterFunc(time.Millisecond*100*2, func() {
+			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
@@ -373,11 +391,22 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
-		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+		var callback func(r *scanner.Request)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(func(cb func(r *scanner.Request)) {
+			callback = cb
+		})
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			ip := net.ParseIP("172.17.0.1")
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
+			callback(&scanner.Request{
+				Type: scanner.SynRequest,
+				IP:   "172.17.0.1",
+				Port: 22,
+			})
+
 			scanResults <- &scanner.ScanResult{
 				Type: scanner.ARPResult,
 				Payload: &scanner.ArpScanResult{
@@ -390,6 +419,8 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -404,7 +435,7 @@ func TestCore(t *testing.T) {
 					},
 				}
 			})
-			time.AfterFunc(time.Millisecond*100*2, func() {
+			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
@@ -452,6 +483,8 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -466,7 +499,7 @@ func TestCore(t *testing.T) {
 					},
 				}
 			})
-			time.AfterFunc(time.Millisecond*100*2, func() {
+			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}

@@ -3,6 +3,7 @@
 package scanner
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -17,7 +18,8 @@ import (
 )
 
 type SynScanner struct {
-	stop             chan struct{}
+	ctx              context.Context
+	cancel           context.CancelFunc
 	networkInfo      network.Network
 	targets          []*ArpScanResult
 	ports            []string
@@ -43,8 +45,11 @@ func NewSynScanner(
 	resultChan chan *ScanResult,
 	options ...ScannerOption,
 ) *SynScanner {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	scanner := &SynScanner{
-		stop:             make(chan struct{}),
+		ctx:              ctx,
+		cancel:           cancel,
 		targets:          targets,
 		networkInfo:      networkInfo,
 		cap:              &defaultPacketCapture{},
@@ -139,21 +144,11 @@ func (s *SynScanner) Scan() error {
 }
 
 func (s *SynScanner) Stop() {
-	s.stop <- struct{}{}
-
-	<-s.stop
+	s.cancel()
 
 	if s.handle != nil {
 		s.handle.Close()
 	}
-
-	s.scanningMux.Lock()
-	s.scanning = false
-	s.scanningMux.Unlock()
-
-	s.packetSentAtMux.Lock()
-	s.lastPacketSentAt = time.Time{}
-	s.packetSentAtMux.Unlock()
 }
 
 func (s *SynScanner) SetRequestNotifications(cb func(a *Request)) {
@@ -181,10 +176,11 @@ func (s *SynScanner) readPackets() {
 	packetSource.DecodeOptions.NoCopy = true
 	packetSource.DecodeOptions.Lazy = true
 
+	defer s.reset()
+
 	for {
 		select {
-		case <-s.stop:
-			s.stop <- struct{}{}
+		case <-s.ctx.Done():
 			return
 		case packet := <-packetSource.Packets():
 			go s.handlePacket(packet)
@@ -319,4 +315,20 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 	}
 
 	return nil
+}
+
+func (s *SynScanner) reset() {
+	s.scanningMux.Lock()
+	s.scanning = false
+	s.scanningMux.Unlock()
+
+	s.packetSentAtMux.Lock()
+	s.lastPacketSentAt = time.Time{}
+	s.packetSentAtMux.Unlock()
+
+	if s.ctx.Err() != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		s.ctx = ctx
+		s.cancel = cancel
+	}
 }

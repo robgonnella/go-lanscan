@@ -4,6 +4,7 @@ package scanner
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"slices"
 	"sync"
@@ -15,7 +16,8 @@ import (
 )
 
 type FullScanner struct {
-	stop                chan struct{}
+	ctx                 context.Context
+	cancel              context.CancelFunc
 	targets             []string
 	ports               []string
 	listenPort          uint16
@@ -41,6 +43,8 @@ func NewFullScanner(
 	vendorRepo vendor.VendorRepo,
 	options ...ScannerOption,
 ) *FullScanner {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	internalScanResults := make(chan *ScanResult)
 
 	arpScanner := NewArpScanner(
@@ -52,7 +56,8 @@ func NewFullScanner(
 	)
 
 	scanner := &FullScanner{
-		stop:                make(chan struct{}),
+		ctx:                 ctx,
+		cancel:              cancel,
 		netInfo:             netInfo,
 		targets:             targets,
 		listenPort:          listenPort,
@@ -89,6 +94,8 @@ func (s *FullScanner) Scan() error {
 	s.scanning = true
 	s.scanningMux.Unlock()
 
+	defer s.reset()
+
 	go func() {
 		if err := s.arpScanner.Scan(); err != nil {
 			s.errorChan <- err
@@ -97,8 +104,7 @@ func (s *FullScanner) Scan() error {
 
 	for {
 		select {
-		case <-s.stop:
-			s.stop <- struct{}{}
+		case <-s.ctx.Done():
 			return nil
 		case r := <-s.internalScanResults:
 			switch r.Type {
@@ -125,19 +131,14 @@ func (s *FullScanner) Scan() error {
 }
 
 func (s *FullScanner) Stop() {
-	s.stop <- struct{}{}
+	s.cancel()
 
-	<-s.stop
-
-	s.deviceMux.Lock()
-	defer s.deviceMux.Unlock()
-
-	s.devices = []*ArpScanResult{}
-
-	s.scanningMux.Lock()
-	defer s.scanningMux.Unlock()
-
-	s.scanning = false
+	if s.arpScanner != nil {
+		s.arpScanner.Stop()
+	}
+	if s.synScanner != nil {
+		s.synScanner.Stop()
+	}
 }
 
 func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {
@@ -215,4 +216,20 @@ func (s *FullScanner) handleArpResult(result *ArpScanResult) {
 		})
 	}
 
+}
+
+func (s *FullScanner) reset() {
+	s.deviceMux.Lock()
+	s.devices = []*ArpScanResult{}
+	s.deviceMux.Unlock()
+
+	s.scanningMux.Lock()
+	s.scanning = false
+	s.scanningMux.Unlock()
+
+	if s.ctx.Err() != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		s.ctx = ctx
+		s.cancel = cancel
+	}
 }

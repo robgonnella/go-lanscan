@@ -4,6 +4,7 @@ package scanner
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"sync"
 	"time"
@@ -17,7 +18,8 @@ import (
 )
 
 type ArpScanner struct {
-	stop             chan struct{}
+	ctx              context.Context
+	cancel           context.CancelFunc
 	targets          []string
 	networkInfo      network.Network
 	cap              PacketCapture
@@ -41,8 +43,11 @@ func NewArpScanner(
 	vendorRepo vendor.VendorRepo,
 	options ...ScannerOption,
 ) *ArpScanner {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	scanner := &ArpScanner{
-		stop:             make(chan struct{}),
+		ctx:              ctx,
+		cancel:           cancel,
 		targets:          targets,
 		cap:              &defaultPacketCapture{},
 		networkInfo:      networkInfo,
@@ -122,21 +127,11 @@ func (s *ArpScanner) Scan() error {
 }
 
 func (s *ArpScanner) Stop() {
-	s.stop <- struct{}{}
-
-	<-s.stop
+	s.cancel()
 
 	if s.handle != nil {
 		s.handle.Close()
 	}
-
-	s.scanningMux.Lock()
-	s.scanning = false
-	s.scanningMux.Unlock()
-
-	s.packetSentAtMux.Lock()
-	s.lastPacketSentAt = time.Time{}
-	s.packetSentAtMux.Unlock()
 }
 
 func (s *ArpScanner) SetRequestNotifications(cb func(a *Request)) {
@@ -164,10 +159,11 @@ func (s *ArpScanner) readPackets() {
 	packetSource.DecodeOptions.NoCopy = true
 	packetSource.DecodeOptions.Lazy = true
 
+	defer s.reset()
+
 	for {
 		select {
-		case <-s.stop:
-			s.stop <- struct{}{}
+		case <-s.ctx.Done():
 			return
 		case packet := <-packetSource.Packets():
 			arpLayer := packet.Layer(layers.LayerTypeARP)
@@ -281,4 +277,20 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 			Payload: arpResult,
 		}
 	}()
+}
+
+func (s *ArpScanner) reset() {
+	s.scanningMux.Lock()
+	s.scanning = false
+	s.scanningMux.Unlock()
+
+	s.packetSentAtMux.Lock()
+	s.lastPacketSentAt = time.Time{}
+	s.packetSentAtMux.Unlock()
+
+	if s.ctx.Err() != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		s.ctx = ctx
+		s.cancel = cancel
+	}
 }

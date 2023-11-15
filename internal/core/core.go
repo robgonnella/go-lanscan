@@ -96,7 +96,7 @@ func (c *Core) Initialize(
 		Devices: []*DeviceResult{},
 	}
 
-	arpTracker := tracker(pw, "starting arp scan", true)
+	arpTracker := &progress.Tracker{Message: "starting arp scan"}
 	arpTracker.Total = int64(targetLen)
 
 	if noProgress {
@@ -112,7 +112,7 @@ func (c *Core) Initialize(
 	c.portLen = portLen
 	c.pw = pw
 	c.arpTracker = arpTracker
-	c.synTracker = tracker(pw, "starting syn scan", false)
+	c.synTracker = &progress.Tracker{Message: "starting syn scan"}
 	c.noProgress = noProgress
 	c.arpOnly = arpOnly
 	c.printJson = printJson
@@ -124,6 +124,8 @@ func (c *Core) Run() error {
 	if !c.noProgress {
 		go c.pw.Render()
 	}
+
+	c.pw.AppendTracker(c.arpTracker)
 
 	// run in go routine so we can process in results in parallel
 	go func() {
@@ -142,9 +144,8 @@ OUTER:
 			case scanner.ARPResult:
 				go c.processArpResult(res.Payload.(*scanner.ArpScanResult))
 			case scanner.ARPDone:
-				go c.processArpDone()
+				c.processArpDone()
 				if c.arpOnly {
-					c.printArpResults()
 					break OUTER
 				}
 			case scanner.SYNResult:
@@ -228,9 +229,8 @@ func (c *Core) processArpResult(result *scanner.ArpScanResult) {
 }
 
 func (c *Core) processArpDone() {
-	if c.arpOnly {
-		return
-	}
+	c.mux.RLock()
+	defer c.mux.RUnlock()
 
 	if !c.noProgress {
 		c.printArpResults()
@@ -255,36 +255,44 @@ func (c *Core) processArpDone() {
 }
 
 func (c *Core) requestCallback(r *scanner.Request) {
-	if r.Type == scanner.ArpRequest {
-		message := fmt.Sprintf("arp - scanning %s", r.IP)
-
-		c.arpTracker.Message = message
+	switch r.Type {
+	case scanner.ArpRequest:
 		c.arpTracker.Increment(1)
 
-		if c.arpTracker.IsDone() {
-			c.arpTracker.Message = "arp - scan complete"
-			go func() {
-				// for some reason this needs to run in a goroutine with a delay
-				// otherwise the tracker output prevents this log line from printing
-				time.Sleep(time.Millisecond * 100)
-				c.log.Info().Msg("compiling arp results...")
-			}()
-		}
-	}
+		message := fmt.Sprintf("arp - scanning %s", r.IP)
 
-	if r.Type == scanner.SynRequest {
-		message := fmt.Sprintf("syn - scanning port %d on %s", r.Port, r.IP)
-		c.synTracker.Message = message
-		c.synTracker.Increment(1)
-		if c.synTracker.IsDone() {
-			c.synTracker.Message = "syn - scan complete"
+		if c.arpTracker.IsDone() {
+			message = "arp - scan complete"
 			go func() {
-				// for some reason this needs to run in a goroutine with a delay
-				// otherwise the tracker output prevents this log line from printing
-				time.Sleep(time.Millisecond * 100)
-				c.log.Info().Msg("compiling syn results...")
+				// delay to print line after message is updated
+				time.AfterFunc(time.Millisecond*100, func() {
+					c.log.Info().Msg("compiling arp results...")
+				})
 			}()
 		}
+
+		c.arpTracker.Message = message
+	case scanner.SynRequest:
+		c.synTracker.Increment(1)
+
+		message := fmt.Sprintf(
+			"syn - scanning port %d on %s",
+			r.Port,
+			r.IP,
+		)
+
+		if c.synTracker.IsDone() {
+			message = "syn - scan complete"
+			go func() {
+				// delay to print line after message is updated
+				time.AfterFunc(time.Millisecond*100, func() {
+					c.log.Info().Msg("compiling syn results...")
+				})
+			}()
+		}
+
+		c.synTracker.Message = message
+
 	}
 }
 
@@ -372,14 +380,4 @@ func progressWriter() progress.Writer {
 	pw.Style().Options.PercentFormat = "%4.3f%%"
 
 	return pw
-}
-
-func tracker(pw progress.Writer, message string, attach bool) *progress.Tracker {
-	tracker := &progress.Tracker{Message: message}
-
-	if attach {
-		pw.AppendTracker(tracker)
-	}
-
-	return tracker
 }
