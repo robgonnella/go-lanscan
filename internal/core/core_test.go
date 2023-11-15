@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -179,10 +180,25 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
-		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+		wg := sync.WaitGroup{}
+
+		wg.Add(1)
+
+		var callback func(r *scanner.Request)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
+			func(cb func(r *scanner.Request)) {
+				callback = cb
+			},
+		)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
+			callback(&scanner.Request{
+				Type: scanner.ArpRequest,
+				IP:   "172.17.0.1",
+			})
 
 			scanResults <- &scanner.ScanResult{
 				Type: scanner.ARPResult,
@@ -197,6 +213,7 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+				wg.Done()
 			})
 			return nil
 		})
@@ -216,6 +233,8 @@ func TestCore(t *testing.T) {
 		err := runner.Run()
 
 		assert.NoError(st, err)
+
+		wg.Wait()
 	})
 
 	t.Run("performs arp only scan and prints json", func(st *testing.T) {
@@ -225,10 +244,25 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
-		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
+		wg := sync.WaitGroup{}
+
+		wg.Add(1)
+
+		var callback func(r *scanner.Request)
+
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
+			func(cb func(r *scanner.Request)) {
+				callback = cb
+			},
+		)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
+			callback(&scanner.Request{
+				Type: scanner.ArpRequest,
+				IP:   "172.17.0.1",
+			})
 
 			scanResults <- &scanner.ScanResult{
 				Type: scanner.ARPResult,
@@ -243,6 +277,7 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+				wg.Done()
 			})
 			return nil
 		})
@@ -262,6 +297,8 @@ func TestCore(t *testing.T) {
 		err := runner.Run()
 
 		assert.NoError(st, err)
+
+		wg.Wait()
 	})
 
 	t.Run("performs arp only scan and silences output", func(st *testing.T) {
@@ -271,6 +308,10 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		wg := sync.WaitGroup{}
+
+		wg.Add(1)
+
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
 			scanResults <- &scanner.ScanResult{
@@ -285,6 +326,7 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+				wg.Done()
 			})
 			return nil
 		})
@@ -304,6 +346,8 @@ func TestCore(t *testing.T) {
 		err := runner.Run()
 
 		assert.NoError(st, err)
+
+		wg.Wait()
 	})
 
 	t.Run("performs syn scan and prints text table", func(st *testing.T) {
@@ -313,15 +357,26 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		wg := sync.WaitGroup{}
+
+		wg.Add(3)
+
 		var callback func(r *scanner.Request)
 
-		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(func(cb func(r *scanner.Request)) {
-			callback = cb
-		})
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
+			func(cb func(r *scanner.Request)) {
+				callback = cb
+			},
+		)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			ip := net.ParseIP("172.17.0.1")
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
+			callback(&scanner.Request{
+				Type: scanner.ArpRequest,
+				IP:   "172.17.0.1",
+			})
 
 			callback(&scanner.Request{
 				Type: scanner.SynRequest,
@@ -342,6 +397,7 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
@@ -357,11 +413,13 @@ func TestCore(t *testing.T) {
 						},
 					},
 				}
+				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
+				wg.Done()
 			})
 
 			return nil
@@ -382,6 +440,8 @@ func TestCore(t *testing.T) {
 		err := runner.Run()
 
 		assert.NoError(st, err)
+
+		wg.Wait()
 	})
 
 	t.Run("performs syn scan and prints json", func(st *testing.T) {
@@ -391,15 +451,26 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		wg := sync.WaitGroup{}
+
+		wg.Add(3)
+
 		var callback func(r *scanner.Request)
 
-		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(func(cb func(r *scanner.Request)) {
-			callback = cb
-		})
+		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
+			func(cb func(r *scanner.Request)) {
+				callback = cb
+			},
+		)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			ip := net.ParseIP("172.17.0.1")
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
+
+			callback(&scanner.Request{
+				Type: scanner.ArpRequest,
+				IP:   "172.17.0.1",
+			})
 
 			callback(&scanner.Request{
 				Type: scanner.SynRequest,
@@ -419,6 +490,7 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
@@ -434,11 +506,13 @@ func TestCore(t *testing.T) {
 						},
 					},
 				}
+				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
+				wg.Done()
 			})
 
 			return nil
@@ -459,6 +533,8 @@ func TestCore(t *testing.T) {
 		err := runner.Run()
 
 		assert.NoError(st, err)
+
+		wg.Wait()
 	})
 
 	t.Run("performs syn scan silences output", func(st *testing.T) {
@@ -467,6 +543,10 @@ func TestCore(t *testing.T) {
 		runner := core.New()
 
 		scanResults := make(chan *scanner.ScanResult)
+
+		wg := sync.WaitGroup{}
+
+		wg.Add(3)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			ip := net.ParseIP("172.17.0.1")
@@ -483,6 +563,7 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
+				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
@@ -498,11 +579,13 @@ func TestCore(t *testing.T) {
 						},
 					},
 				}
+				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
+				wg.Done()
 			})
 
 			return nil
@@ -523,5 +606,7 @@ func TestCore(t *testing.T) {
 		err := runner.Run()
 
 		assert.NoError(st, err)
+
+		wg.Wait()
 	})
 }

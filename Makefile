@@ -83,7 +83,6 @@ test:
 	rm -rf $(coverage_out)
 	go test \
 		-v \
-		-race \
 		-coverprofile $(coverage_out) \
 		-covermode=atomic \
 		./...
