@@ -191,7 +191,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
-			time.AfterFunc(time.Second, func() {
+			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
@@ -235,7 +235,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
-			time.AfterFunc(time.Second, func() {
+			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
@@ -277,7 +277,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
-			time.AfterFunc(time.Second, func() {
+			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
@@ -322,7 +322,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
-			time.AfterFunc(time.Second, func() {
+			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
@@ -340,7 +340,7 @@ func TestCore(t *testing.T) {
 					},
 				}
 			})
-			time.AfterFunc(time.Second*2, func() {
+			time.AfterFunc(time.Millisecond*100*2, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
@@ -386,7 +386,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
-			time.AfterFunc(time.Second, func() {
+			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
@@ -404,7 +404,7 @@ func TestCore(t *testing.T) {
 					},
 				}
 			})
-			time.AfterFunc(time.Second*2, func() {
+			time.AfterFunc(time.Millisecond*100*2, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
@@ -448,7 +448,7 @@ func TestCore(t *testing.T) {
 					Vendor: "Apple",
 				},
 			}
-			time.AfterFunc(time.Second, func() {
+			time.AfterFunc(time.Millisecond*100, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
@@ -466,7 +466,7 @@ func TestCore(t *testing.T) {
 					},
 				}
 			})
-			time.AfterFunc(time.Second*2, func() {
+			time.AfterFunc(time.Millisecond*100*2, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
