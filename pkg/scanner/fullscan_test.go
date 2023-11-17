@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/gopacket"
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
@@ -49,10 +50,6 @@ func TestFullScanner(t *testing.T) {
 			scanner.WithPacketCapture(cap),
 		)
 
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
-
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().IPNet().Return(mockIPNet)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
@@ -70,8 +67,7 @@ func TestFullScanner(t *testing.T) {
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
 			defer func() {
-				fullScanner.Stop()
-				wg.Done()
+				time.AfterFunc(time.Millisecond*500, fullScanner.Stop)
 			}()
 			return nil
 		})
@@ -83,8 +79,6 @@ func TestFullScanner(t *testing.T) {
 		go fullScanner.Scan()
 
 		err := fullScanner.Scan()
-
-		wg.Wait()
 
 		assert.NoError(st, err)
 	})

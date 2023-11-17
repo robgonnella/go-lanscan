@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/gopacket"
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
@@ -33,9 +34,6 @@ func TestSynScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
-
-		wg := sync.WaitGroup{}
-		wg.Add(1)
 
 		resultChan := make(chan *scanner.ScanResult)
 
@@ -70,8 +68,7 @@ func TestSynScanner(t *testing.T) {
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
 			defer func() {
-				synScanner.Stop()
-				wg.Done()
+				time.AfterFunc(time.Millisecond*500, synScanner.Stop)
 			}()
 			return nil
 		})
@@ -83,8 +80,6 @@ func TestSynScanner(t *testing.T) {
 		go synScanner.Scan()
 
 		err := synScanner.Scan()
-
-		wg.Wait()
 
 		assert.NoError(st, err)
 	})
