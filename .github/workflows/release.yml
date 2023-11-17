@@ -1,0 +1,98 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install libpcap-dev
+        run: sudo apt update && sudo apt install -y libpcap-dev
+
+      - name: Build Linux
+        run: make release
+
+      - name: Upload Linux Build
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux_build_${{ github.run_id }}
+          path: build
+
+  build_darwin:
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install libpcap
+        run: brew install libpcap
+
+      - name: Build Darwin
+        run: make release
+
+      - name: Upload Darwin Build
+        uses: actions/upload-artifact@v3
+        with:
+          name: darwin_build_${{ github.run_id }}
+          path: build
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build_linux, build_darwin]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download Linux Build
+        uses: actions/download-artifact@v3
+        with:
+          name: linux_build_${{ github.run_id }}
+
+      - name: Download Darwin Build
+        uses: actions/download-artifact@v3
+        with:
+          name: darwin_build_${{ github.run_id }}
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: '*.zip'
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+  update_latest:
+    runs-on: ubuntu-latest
+    needs: [release]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Install libpcap-dev
+        run: sudo apt update && sudo apt install -y libpcap-dev
+      - name: Update go package to latest
+        run: go install github.com/robgonnella/ops@"${GITHUB_REF#refs/tags/}"

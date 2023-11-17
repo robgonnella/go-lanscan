@@ -1,0 +1,29 @@
+name: Go test
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '!v*'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y make libpcap-dev
+
+      - name: Build
+        run: make
+
+      - name: Test
+        run: make test
