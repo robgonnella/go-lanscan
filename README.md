@@ -22,6 +22,12 @@ Once dependencies are installed, run the following command to install go-lanscan
 go install github.com/robgonnella/go-lanscan@latest
 ```
 
+### Pre-built Binaries
+
+Some pre-built binaries are provided in the releases section of github:
+https://github.com/robgonnella/go-lanscan/releases. These binaries still have
+a prerequisite on libpcap being installed first.
+
 ### Usage
 
 ```bash
