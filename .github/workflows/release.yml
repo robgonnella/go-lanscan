@@ -95,4 +95,4 @@ jobs:
       - name: Install libpcap-dev
         run: sudo apt update && sudo apt install -y libpcap-dev
       - name: Update go package to latest
-        run: go install github.com/robgonnella/ops@"${GITHUB_REF#refs/tags/}"
+        run: go install github.com/robgonnella/go-lanscan@"${GITHUB_REF#refs/tags/}"
