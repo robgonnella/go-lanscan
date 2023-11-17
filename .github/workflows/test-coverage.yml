@@ -1,4 +1,4 @@
-name: Generate code coverage badge
+name: Test
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: Update coverage badge
+    name: Test and update coverage badge
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
       - name: Go Coverage Badge
         uses: tj-actions/coverage-badge-go@v2
         with:
-          filename: coverage.txt
+          filename: coverage/coverage.txt
 
       - name: Verify Changed files
         uses: tj-actions/verify-changed-files@v16

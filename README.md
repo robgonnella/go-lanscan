@@ -1,4 +1,5 @@
 # go-lanscan
+![Coverage](https://img.shields.io/badge/Coverage-1-red)
 
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.
@@ -21,6 +22,12 @@ Once dependencies are installed, run the following command to install go-lanscan
 ```bash
 go install github.com/robgonnella/go-lanscan@latest
 ```
+
+### Pre-built Binaries
+
+Some pre-built binaries are provided in the releases section of github:
+https://github.com/robgonnella/go-lanscan/releases. These binaries still have
+a prerequisite on libpcap being installed first.
 
 ### Usage
 
