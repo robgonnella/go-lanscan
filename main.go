@@ -7,7 +7,7 @@ import (
 	"github.com/robgonnella/go-lanscan/internal/core"
 	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/pkg/network"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to find default network")
 	}
 
-	vendorRepo, err := vendor.GetDefaultVendorRepo()
+	vendorRepo, err := oui.GetDefaultVendorRepo()
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize vendor repo")

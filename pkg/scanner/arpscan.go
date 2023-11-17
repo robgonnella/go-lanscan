@@ -14,7 +14,7 @@ import (
 
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
 type ArpScanner struct {
@@ -31,7 +31,7 @@ type ArpScanner struct {
 	idleTimeout      time.Duration
 	includeVendor    bool
 	accuracy         time.Duration
-	vendorRepo       vendor.VendorRepo
+	vendorRepo       oui.VendorRepo
 	scanningMux      *sync.RWMutex
 	packetSentAtMux  *sync.RWMutex
 }
@@ -40,7 +40,7 @@ func NewArpScanner(
 	targets []string,
 	networkInfo network.Network,
 	resultChan chan *ScanResult,
-	vendorRepo vendor.VendorRepo,
+	vendorRepo oui.VendorRepo,
 	options ...ScannerOption,
 ) *ArpScanner {
 	ctx, cancel := context.WithCancel(context.Background())

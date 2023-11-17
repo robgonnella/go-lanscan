@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package vendor
+package oui
 
 import (
 	"errors"
@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/klauspost/oui"
+	kloui "github.com/klauspost/oui"
 )
 
 type OUIVendorRepo struct {
 	ouiTxt string
-	db     oui.StaticDB
+	db     kloui.StaticDB
 }
 
 func NewOUIVendorRepo(ouiTxt string) (*OUIVendorRepo, error) {
@@ -72,7 +72,7 @@ func (r *OUIVendorRepo) Query(mac net.HardwareAddr) (*VendorResult, error) {
 
 	entry, err := r.db.Query(strings.ReplaceAll(mac.String(), ":", "-"))
 
-	if errors.Is(err, oui.ErrNotFound) {
+	if errors.Is(err, kloui.ErrNotFound) {
 		return result, nil
 	}
 
@@ -86,7 +86,7 @@ func (r *OUIVendorRepo) Query(mac net.HardwareAddr) (*VendorResult, error) {
 }
 
 func (r *OUIVendorRepo) loadDatabase() error {
-	db, err := oui.OpenStaticFile(r.ouiTxt)
+	db, err := kloui.OpenStaticFile(r.ouiTxt)
 
 	if err != nil {
 		return err

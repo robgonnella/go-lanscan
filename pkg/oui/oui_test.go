@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package vendor_test
+package oui_test
 
 import (
 	"net"
 	"os"
 	"testing"
 
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +26,7 @@ func TestUpdateVendors(t *testing.T) {
 
 		assert.True(st, os.IsNotExist(err))
 
-		repo, err := vendor.NewOUIVendorRepo(ouiTxt)
+		repo, err := oui.NewOUIVendorRepo(ouiTxt)
 
 		assert.NoError(st, err)
 
@@ -52,7 +52,7 @@ func TestQueryVendor(t *testing.T) {
 	reset()
 	defer reset()
 
-	repo, err := vendor.NewOUIVendorRepo(ouiTxt)
+	repo, err := oui.NewOUIVendorRepo(ouiTxt)
 
 	assert.NoError(t, err)
 

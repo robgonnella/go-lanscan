@@ -9,7 +9,7 @@ import (
 	"github.com/robgonnella/go-lanscan/internal/cli"
 	mock_core "github.com/robgonnella/go-lanscan/internal/mock/core"
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
-	mock_vendor "github.com/robgonnella/go-lanscan/mock/vendor"
+	mock_oui "github.com/robgonnella/go-lanscan/mock/oui"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -23,7 +23,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+		mockVendor := mock_oui.NewMockVendorRepo(ctrl)
 
 		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
 
@@ -68,7 +68,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+		mockVendor := mock_oui.NewMockVendorRepo(ctrl)
 
 		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
 
@@ -121,7 +121,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+		mockVendor := mock_oui.NewMockVendorRepo(ctrl)
 
 		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
 
@@ -169,7 +169,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+		mockVendor := mock_oui.NewMockVendorRepo(ctrl)
 
 		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
 
@@ -221,7 +221,7 @@ func TestRootCommand(t *testing.T) {
 
 		mockRunner := mock_core.NewMockRunner(ctrl)
 
-		mockVendor := mock_vendor.NewMockVendorRepo(ctrl)
+		mockVendor := mock_oui.NewMockVendorRepo(ctrl)
 
 		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
 

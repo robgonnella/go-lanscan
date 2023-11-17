@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package vendor
+package oui
 
 import (
 	"net"
 )
 
-//go:generate mockgen -destination=../../mock/vendor/vendor.go -package=mock_vendor . VendorRepo
+//go:generate mockgen -destination=../../mock/oui/oui.go -package=mock_oui . VendorRepo
 
 type VendorResult struct {
 	Name string

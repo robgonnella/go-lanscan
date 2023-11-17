@@ -12,7 +12,7 @@ import (
 
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
 type FullScanner struct {
@@ -40,7 +40,7 @@ func NewFullScanner(
 	ports []string,
 	listenPort uint16,
 	results chan *ScanResult,
-	vendorRepo vendor.VendorRepo,
+	vendorRepo oui.VendorRepo,
 	options ...ScannerOption,
 ) *FullScanner {
 	ctx, cancel := context.WithCancel(context.Background())

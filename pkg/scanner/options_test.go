@@ -7,8 +7,8 @@ import (
 	"time"
 
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
+	mock_oui "github.com/robgonnella/go-lanscan/mock/oui"
 	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
-	mock_vendor "github.com/robgonnella/go-lanscan/mock/vendor"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -31,7 +31,7 @@ func TestOptions(t *testing.T) {
 	defer ctrl.Finish()
 
 	testPacketCapture := mock_scanner.NewMockPacketCapture(ctrl)
-	vendorRepo := mock_vendor.NewMockVendorRepo(ctrl)
+	vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 
 	t.Run("sets options", func(st *testing.T) {
 		netInfo := mock_network.NewMockNetwork(ctrl)

@@ -11,14 +11,14 @@ import (
 	"github.com/robgonnella/go-lanscan/internal/core"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
 func Root(
 	runner core.Runner,
 	userNet network.Network,
-	vendorRepo vendor.VendorRepo,
+	vendorRepo oui.VendorRepo,
 ) (*cobra.Command, error) {
 	var printJson bool
 	var noProgress bool

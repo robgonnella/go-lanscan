@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/gopacket"
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
+	mock_oui "github.com/robgonnella/go-lanscan/mock/oui"
 	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
-	mock_vendor "github.com/robgonnella/go-lanscan/mock/vendor"
 	test_helper "github.com/robgonnella/go-lanscan/pkg/internal/test-helper"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func TestFullScanner(t *testing.T) {
 	t.Run("returns immediately if already scanning", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_vendor.NewMockVendorRepo(ctrl)
+		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -92,7 +92,7 @@ func TestFullScanner(t *testing.T) {
 	t.Run("performs full scan on default network for all ports", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_vendor.NewMockVendorRepo(ctrl)
+		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
 		sentArpResult := false
@@ -166,7 +166,7 @@ func TestFullScanner(t *testing.T) {
 	t.Run("performs full scan on provided targets and ports", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_vendor.NewMockVendorRepo(ctrl)
+		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
 		sentArpResult := false

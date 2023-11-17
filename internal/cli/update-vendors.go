@@ -4,11 +4,11 @@ package cli
 
 import (
 	"github.com/robgonnella/go-lanscan/internal/logger"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 	"github.com/spf13/cobra"
 )
 
-func newUpdateVendors(vendorRepo vendor.VendorRepo) *cobra.Command {
+func newUpdateVendors(vendorRepo oui.VendorRepo) *cobra.Command {
 	return &cobra.Command{
 		Use:   "update-vendors",
 		Short: "Updates static vendors database",

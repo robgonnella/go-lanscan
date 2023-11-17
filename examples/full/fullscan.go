@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
-	"github.com/robgonnella/go-lanscan/pkg/vendor"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 		panic(err)
 	}
 
-	vendorRepo, err := vendor.GetDefaultVendorRepo()
+	vendorRepo, err := oui.GetDefaultVendorRepo()
 
 	if err != nil {
 		panic(err)
