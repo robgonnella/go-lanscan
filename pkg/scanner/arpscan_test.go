@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/gopacket"
 	mock_network "github.com/robgonnella/go-lanscan/mock/network"
@@ -51,10 +52,6 @@ func TestArpScanner(t *testing.T) {
 			scanner.WithPacketCapture(cap),
 		)
 
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
-
 		mockNetInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		mockNetInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP)
@@ -71,8 +68,7 @@ func TestArpScanner(t *testing.T) {
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
 			defer func() {
-				arpScanner.Stop()
-				wg.Done()
+				time.AfterFunc(time.Millisecond*500, arpScanner.Stop)
 			}()
 			return nil
 		})
@@ -87,8 +83,6 @@ func TestArpScanner(t *testing.T) {
 		go arpScanner.Scan()
 
 		err := arpScanner.Scan()
-
-		wg.Wait()
 
 		assert.NoError(st, err)
 	})
