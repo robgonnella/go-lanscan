@@ -22,7 +22,8 @@ darwin_objects = $(component_path)_darwin_$(arch)
 
 #### Test Objects ####
 test_output_dir = coverage
-coverage_out = $(test_output_dir)/coverage.txt
+coverage_profile = $(test_output_dir)/coverage.profile
+coverage_out = $(test_output_dir)/coverage.out
 
 #### Gather Objects ####
 
@@ -79,21 +80,25 @@ lint:
 
 .PHONY: test
 test:
+	rm -rf $(test_output_dir)
 	mkdir -p $(test_output_dir)
-	rm -rf $(coverage_out)
 	go test \
 		-v \
-		-coverprofile $(coverage_out) \
+		-coverprofile $(coverage_profile) \
 		-covermode=atomic \
 		./...
 
+.PHONY: print-coverage
+print-coverage:
+	go tool cover -func $(coverage_profile)
+
 .PHONY: coverage
 coverage:
-	go tool cover -func $(coverage_out)
+	go tool cover -func $(coverage_profile) -o=$(coverage_out)
 
 .PHONY: test-report
 test-report:
-	go tool cover -html=$(coverage_out)
+	go tool cover -html=$(coverage_profile)
 
 .PHONY: deps
 deps:
