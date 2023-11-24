@@ -37,8 +37,7 @@ func main() {
 		ports,
 		listenPort,
 		scanResults,
-		vendorRepo,
-		scanner.WithVendorInfo(true),
+		scanner.WithVendorInfo(vendorRepo),
 	)
 
 	go func() {

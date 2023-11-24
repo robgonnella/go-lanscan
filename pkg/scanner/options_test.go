@@ -42,12 +42,11 @@ func TestOptions(t *testing.T) {
 			[]string{},
 			netInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
-			scanner.WithVendorInfo(true),
+			scanner.WithVendorInfo(vendorRepo),
 		)
 
 		scanner.NewFullScanner(
@@ -56,12 +55,11 @@ func TestOptions(t *testing.T) {
 			[]string{},
 			54321,
 			resultChan,
-			vendorRepo,
 			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
-			scanner.WithVendorInfo(true),
+			scanner.WithVendorInfo(vendorRepo),
 		)
 
 		scanner.NewSynScanner(
@@ -74,7 +72,7 @@ func TestOptions(t *testing.T) {
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
-			scanner.WithVendorInfo(true),
+			scanner.WithVendorInfo(vendorRepo),
 		)
 	})
 }

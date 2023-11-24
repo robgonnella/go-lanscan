@@ -29,7 +29,6 @@ type ArpScanner struct {
 	scanning         bool
 	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
-	includeVendor    bool
 	accuracy         time.Duration
 	vendorRepo       oui.VendorRepo
 	scanningMux      *sync.RWMutex
@@ -40,7 +39,6 @@ func NewArpScanner(
 	targets []string,
 	networkInfo network.Network,
 	resultChan chan *ScanResult,
-	vendorRepo oui.VendorRepo,
 	options ...ScannerOption,
 ) *ArpScanner {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,9 +53,7 @@ func NewArpScanner(
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
-		includeVendor:    false,
 		accuracy:         time.Millisecond,
-		vendorRepo:       vendorRepo,
 		scanningMux:      &sync.RWMutex{},
 		packetSentAtMux:  &sync.RWMutex{},
 	}
@@ -142,8 +138,8 @@ func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
-func (s *ArpScanner) IncludeVendorInfo(value bool) {
-	s.includeVendor = value
+func (s *ArpScanner) IncludeVendorInfo(repo oui.VendorRepo) {
+	s.vendorRepo = repo
 }
 
 func (s *ArpScanner) SetAccuracy(accuracy Accuracy) {
@@ -263,7 +259,7 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 		Vendor: "unknown",
 	}
 
-	if s.includeVendor {
+	if s.vendorRepo != nil {
 		vendor, err := s.vendorRepo.Query(mac)
 
 		if err == nil {

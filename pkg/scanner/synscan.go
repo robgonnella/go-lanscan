@@ -15,6 +15,7 @@ import (
 
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
 type SynScanner struct {
@@ -163,7 +164,7 @@ func (s *SynScanner) SetAccuracy(accuracy Accuracy) {
 	s.accuracy = accuracy.Duration()
 }
 
-func (s *SynScanner) IncludeVendorInfo(value bool) {
+func (s *SynScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	// nothing to do
 }
 

@@ -74,9 +74,7 @@ func Root(
 					targets,
 					userNet,
 					scanResults,
-					vendorRepo,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-					scanner.WithVendorInfo(vendorInfo),
 					scanner.WithAccuracy(scannerAccuracy),
 				)
 			} else {
@@ -86,11 +84,13 @@ func Root(
 					portList,
 					listenPort,
 					scanResults,
-					vendorRepo,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-					scanner.WithVendorInfo(vendorInfo),
 					scanner.WithAccuracy(scannerAccuracy),
 				)
+			}
+
+			if vendorInfo {
+				coreScanner.IncludeVendorInfo(vendorRepo)
 			}
 
 			portLen := util.PortTotal(portList)

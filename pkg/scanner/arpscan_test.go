@@ -39,7 +39,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("returns immediately if already scanning", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -48,7 +47,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -89,7 +87,6 @@ func TestArpScanner(t *testing.T) {
 
 	t.Run("returns error if PacketCapture.OpenLive return error", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -98,7 +95,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -121,7 +117,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("performs arp scan on default network info", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -130,7 +125,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -176,7 +170,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("performs arp scan on provided targets", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -185,7 +178,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -230,7 +222,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("ignores non arp reply packets", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -239,7 +230,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -281,7 +271,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("ignores arp reply packets that originate from scanning host", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -290,7 +279,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -335,7 +323,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("process valid arp reply packet", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		resultChan := make(chan *scanner.ScanResult)
@@ -344,7 +331,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -398,9 +384,8 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
-			scanner.WithVendorInfo(true),
+			scanner.WithVendorInfo(vendorRepo),
 		)
 
 		wg := sync.WaitGroup{}
@@ -460,9 +445,8 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
-			scanner.WithVendorInfo(true),
+			scanner.WithVendorInfo(vendorRepo),
 		)
 
 		wg := sync.WaitGroup{}
@@ -511,7 +495,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("calls request notification callback", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		callback := func(request *scanner.Request) {
@@ -524,7 +507,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)
@@ -560,11 +542,6 @@ func TestArpScanner(t *testing.T) {
 			)
 		})
 
-		vendorRepo.EXPECT().Query(gomock.Any()).AnyTimes().Return(
-			nil,
-			errors.New("mock vendor query error"),
-		)
-
 		err := arpScanner.Scan()
 
 		wg.Wait()
@@ -575,7 +552,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("handles serialize layers error", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		callback := func(request *scanner.Request) {
@@ -588,7 +564,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)
@@ -626,7 +601,6 @@ func TestArpScanner(t *testing.T) {
 	t.Run("handles write packet data error", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
-		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		callback := func(request *scanner.Request) {
@@ -639,7 +613,6 @@ func TestArpScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			resultChan,
-			vendorRepo,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)

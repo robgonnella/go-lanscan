@@ -38,8 +38,8 @@ func main() {
 		targets,
 		userNet,
 		results,
-		vendorRepo,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeout)),
+		scanner.WithVendorInfo(vendorRepo),
 	)
 
 	go func() {

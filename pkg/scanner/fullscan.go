@@ -40,7 +40,6 @@ func NewFullScanner(
 	ports []string,
 	listenPort uint16,
 	results chan *ScanResult,
-	vendorRepo oui.VendorRepo,
 	options ...ScannerOption,
 ) *FullScanner {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -51,7 +50,6 @@ func NewFullScanner(
 		targets,
 		netInfo,
 		internalScanResults,
-		vendorRepo,
 		options...,
 	)
 
@@ -151,9 +149,9 @@ func (s *FullScanner) SetIdleTimeout(d time.Duration) {
 	s.options = append(s.options, WithIdleTimeout(d))
 }
 
-func (s *FullScanner) IncludeVendorInfo(value bool) {
-	s.arpScanner.IncludeVendorInfo(value)
-	s.options = append(s.options, WithVendorInfo(value))
+func (s *FullScanner) IncludeVendorInfo(repo oui.VendorRepo) {
+	s.arpScanner.IncludeVendorInfo(repo)
+	s.options = append(s.options, WithVendorInfo(repo))
 }
 
 func (s *FullScanner) SetAccuracy(accuracy Accuracy) {

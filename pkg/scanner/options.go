@@ -2,7 +2,11 @@
 
 package scanner
 
-import "time"
+import (
+	"time"
+
+	"github.com/robgonnella/go-lanscan/pkg/oui"
+)
 
 type ScannerOption = func(s Scanner)
 
@@ -45,9 +49,9 @@ func WithIdleTimeout(duration time.Duration) ScannerOption {
 	}
 }
 
-func WithVendorInfo(value bool) ScannerOption {
+func WithVendorInfo(repo oui.VendorRepo) ScannerOption {
 	return func(s Scanner) {
-		s.IncludeVendorInfo(value)
+		s.IncludeVendorInfo(repo)
 	}
 }
 

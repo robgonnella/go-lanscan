@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
+	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
 //go:generate mockgen -destination=../../mock/scanner/scanner.go -package=mock_scanner . Scanner,PacketCaptureHandle,PacketCapture
@@ -30,7 +31,7 @@ type Scanner interface {
 	Stop()
 	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
-	IncludeVendorInfo(value bool)
+	IncludeVendorInfo(repo oui.VendorRepo)
 	SetAccuracy(accuracy Accuracy)
 	SetPacketCapture(cap PacketCapture)
 }

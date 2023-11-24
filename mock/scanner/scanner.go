@@ -13,6 +13,7 @@ import (
 	time "time"
 
 	gopacket "github.com/google/gopacket"
+	oui "github.com/robgonnella/go-lanscan/pkg/oui"
 	scanner "github.com/robgonnella/go-lanscan/pkg/scanner"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -41,7 +42,7 @@ func (m *MockScanner) EXPECT() *MockScannerMockRecorder {
 }
 
 // IncludeVendorInfo mocks base method.
-func (m *MockScanner) IncludeVendorInfo(arg0 bool) {
+func (m *MockScanner) IncludeVendorInfo(arg0 oui.VendorRepo) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "IncludeVendorInfo", arg0)
 }
