@@ -50,7 +50,6 @@ func NewFullScanner(
 		targets,
 		netInfo,
 		internalScanResults,
-		options...,
 	)
 
 	scanner := &FullScanner{

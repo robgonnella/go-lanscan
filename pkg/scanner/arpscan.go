@@ -140,6 +140,9 @@ func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 
 func (s *ArpScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	s.vendorRepo = repo
+	if err := s.vendorRepo.UpdateVendors(); err != nil {
+		panic(err)
+	}
 }
 
 func (s *ArpScanner) SetAccuracy(accuracy Accuracy) {

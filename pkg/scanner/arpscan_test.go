@@ -380,6 +380,8 @@ func TestArpScanner(t *testing.T) {
 
 		resultChan := make(chan *scanner.ScanResult)
 
+		vendorRepo.EXPECT().UpdateVendors().Times(1)
+
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
@@ -441,6 +443,8 @@ func TestArpScanner(t *testing.T) {
 
 		resultChan := make(chan *scanner.ScanResult)
 
+		vendorRepo.EXPECT().UpdateVendors().Times(1)
+
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
@@ -490,6 +494,28 @@ func TestArpScanner(t *testing.T) {
 		wg.Wait()
 
 		assert.NoError(st, err)
+	})
+
+	t.Run("panics if fails to update static vendors", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
+		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+
+		resultChan := make(chan *scanner.ScanResult)
+
+		vendorRepo.EXPECT().UpdateVendors().Return(errors.New("mock update vendors error"))
+
+		panicTestFunc := func() {
+			scanner.NewArpScanner(
+				[]string{"172.17.1.1"},
+				mockNetInfo,
+				resultChan,
+				scanner.WithPacketCapture(cap),
+				scanner.WithVendorInfo(vendorRepo),
+			)
+		}
+
+		assert.Panics(st, panicTestFunc)
 	})
 
 	t.Run("calls request notification callback", func(st *testing.T) {

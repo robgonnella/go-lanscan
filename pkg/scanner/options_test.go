@@ -33,6 +33,8 @@ func TestOptions(t *testing.T) {
 	testPacketCapture := mock_scanner.NewMockPacketCapture(ctrl)
 	vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 
+	vendorRepo.EXPECT().UpdateVendors().Times(2)
+
 	t.Run("sets options", func(st *testing.T) {
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
