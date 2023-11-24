@@ -2,4 +2,4 @@
 
 package info
 
-var VERSION = "v1.10.0"
+var VERSION = "v1.11.0"
