@@ -35,8 +35,6 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -48,7 +46,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -88,8 +85,6 @@ func TestSynScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -101,7 +96,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -126,8 +120,6 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -139,7 +131,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -166,8 +157,6 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -179,7 +168,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -221,8 +209,6 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -234,7 +220,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -285,8 +270,6 @@ func TestSynScanner(t *testing.T) {
 
 		listenPort := uint16(54321)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -298,7 +281,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -349,8 +331,6 @@ func TestSynScanner(t *testing.T) {
 
 		listenPort := uint16(54321)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -362,7 +342,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -413,8 +392,6 @@ func TestSynScanner(t *testing.T) {
 
 		listenPort := uint16(54321)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -426,7 +403,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -483,8 +459,6 @@ func TestSynScanner(t *testing.T) {
 
 		listenPort := uint16(54321)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		synScanner := scanner.NewSynScanner(
 			[]*scanner.ArpScanResult{
 				{
@@ -496,7 +470,6 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)

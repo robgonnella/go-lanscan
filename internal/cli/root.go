@@ -65,15 +65,12 @@ func Root(
 				scannerAccuracy = scanner.HIGH_ACCURACY
 			}
 
-			scanResults := make(chan *scanner.ScanResult)
-
 			var coreScanner scanner.Scanner
 
 			if arpOnly {
 				coreScanner = scanner.NewArpScanner(
 					targets,
 					userNet,
-					scanResults,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 					scanner.WithAccuracy(scannerAccuracy),
 				)
@@ -83,7 +80,6 @@ func Root(
 					targets,
 					portList,
 					listenPort,
-					scanResults,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 					scanner.WithAccuracy(scannerAccuracy),
 				)
@@ -103,7 +99,6 @@ func Root(
 
 			runner.Initialize(
 				coreScanner,
-				scanResults,
 				targetLen,
 				portLen,
 				noProgress,
