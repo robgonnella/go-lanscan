@@ -28,7 +28,6 @@ func main() {
 
 	targets := []string{}
 	ports := []string{"22", "111", "2000-4000"}
-	scanResults := make(chan *scanner.ScanResult)
 	listenPort := uint16(54321)
 
 	fullScanner := scanner.NewFullScanner(
@@ -36,7 +35,6 @@ func main() {
 		targets,
 		ports,
 		listenPort,
-		scanResults,
 		scanner.WithVendorInfo(vendorRepo),
 	)
 
@@ -46,7 +44,7 @@ func main() {
 		}
 	}()
 
-	for res := range scanResults {
+	for res := range fullScanner.Results() {
 		switch res.Type {
 		case scanner.ARPResult:
 			fmt.Printf("arp scan result: %+v\n", res.Payload.(*scanner.ArpScanResult))

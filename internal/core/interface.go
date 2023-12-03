@@ -9,7 +9,6 @@ import "github.com/robgonnella/go-lanscan/pkg/scanner"
 type Runner interface {
 	Initialize(
 		coreScanner scanner.Scanner,
-		scanResults chan *scanner.ScanResult,
 		targetLen int,
 		portLen int,
 		noProgress bool,

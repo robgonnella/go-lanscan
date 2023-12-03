@@ -41,12 +41,9 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -89,12 +86,9 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -119,12 +113,9 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -172,12 +163,9 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -224,12 +212,9 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -273,12 +258,9 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -325,12 +307,9 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -378,14 +357,11 @@ func TestArpScanner(t *testing.T) {
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		vendorRepo.EXPECT().UpdateVendors().Times(1)
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 			scanner.WithVendorInfo(vendorRepo),
 		)
@@ -441,14 +417,11 @@ func TestArpScanner(t *testing.T) {
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		vendorRepo.EXPECT().UpdateVendors().Times(1)
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 			scanner.WithVendorInfo(vendorRepo),
 		)
@@ -501,15 +474,12 @@ func TestArpScanner(t *testing.T) {
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		vendorRepo.EXPECT().UpdateVendors().Return(errors.New("mock update vendors error"))
 
 		panicTestFunc := func() {
 			scanner.NewArpScanner(
 				[]string{"172.17.1.1"},
 				mockNetInfo,
-				resultChan,
 				scanner.WithPacketCapture(cap),
 				scanner.WithVendorInfo(vendorRepo),
 			)
@@ -527,12 +497,9 @@ func TestArpScanner(t *testing.T) {
 			assert.NotNil(st, request)
 		}
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)
@@ -584,12 +551,9 @@ func TestArpScanner(t *testing.T) {
 			assert.NotNil(st, request)
 		}
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)
@@ -633,12 +597,9 @@ func TestArpScanner(t *testing.T) {
 			assert.NotNil(st, request)
 		}
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 			scanner.WithRequestNotifications(callback),
 		)

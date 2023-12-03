@@ -38,7 +38,6 @@ type ArpScanner struct {
 func NewArpScanner(
 	targets []string,
 	networkInfo network.Network,
-	resultChan chan *ScanResult,
 	options ...ScannerOption,
 ) *ArpScanner {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -49,7 +48,7 @@ func NewArpScanner(
 		targets:          targets,
 		cap:              &defaultPacketCapture{},
 		networkInfo:      networkInfo,
-		resultChan:       resultChan,
+		resultChan:       make(chan *ScanResult),
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
@@ -63,6 +62,10 @@ func NewArpScanner(
 	}
 
 	return scanner
+}
+
+func (s *ArpScanner) Results() chan *ScanResult {
+	return s.resultChan
 }
 
 func (s *ArpScanner) Scan() error {

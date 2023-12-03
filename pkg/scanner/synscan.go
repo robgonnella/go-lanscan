@@ -43,7 +43,6 @@ func NewSynScanner(
 	networkInfo network.Network,
 	ports []string,
 	listenPort uint16,
-	resultChan chan *ScanResult,
 	options ...ScannerOption,
 ) *SynScanner {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -56,7 +55,7 @@ func NewSynScanner(
 		cap:              &defaultPacketCapture{},
 		ports:            ports,
 		listenPort:       listenPort,
-		resultChan:       resultChan,
+		resultChan:       make(chan *ScanResult),
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
@@ -71,6 +70,10 @@ func NewSynScanner(
 	}
 
 	return scanner
+}
+
+func (s *SynScanner) Results() chan *ScanResult {
+	return s.resultChan
 }
 
 func (s *SynScanner) Scan() error {
@@ -170,6 +173,10 @@ func (s *SynScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 
 func (s *SynScanner) SetPacketCapture(cap PacketCapture) {
 	s.cap = cap
+}
+
+func (s *SynScanner) SetTargets(targets []*ArpScanResult) {
+	s.targets = targets
 }
 
 func (s *SynScanner) readPackets() {

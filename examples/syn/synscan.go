@@ -35,7 +35,6 @@ func main() {
 	}
 
 	ports := []string{"22", "111", "2000-4000"}
-	results := make(chan *scanner.ScanResult)
 	listenPort := uint16(54321)
 
 	synScanner := scanner.NewSynScanner(
@@ -43,7 +42,6 @@ func main() {
 		userNet,
 		ports,
 		listenPort,
-		results,
 		scanner.WithIdleTimeout(time.Second*5),
 	)
 
@@ -53,7 +51,7 @@ func main() {
 		}
 	}()
 
-	for result := range results {
+	for result := range synScanner.Results() {
 		switch result.Type {
 		case scanner.SYNResult:
 			fmt.Printf("syn scan result: %+v\n", result.Payload.(*scanner.SynScanResult))

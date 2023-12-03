@@ -29,6 +29,7 @@ type Request struct {
 type Scanner interface {
 	Scan() error
 	Stop()
+	Results() chan *ScanResult
 	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(repo oui.VendorRepo)

@@ -36,14 +36,11 @@ func TestFullScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		fullScanner := scanner.NewFullScanner(
 			netInfo,
 			[]string{},
 			[]string{},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
 
@@ -87,16 +84,15 @@ func TestFullScanner(t *testing.T) {
 
 		sentArpResult := false
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		fullScanner := scanner.NewFullScanner(
 			netInfo,
 			[]string{},
 			[]string{},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
+
+		resultChan := fullScanner.Results()
 
 		wg := sync.WaitGroup{}
 
@@ -159,16 +155,15 @@ func TestFullScanner(t *testing.T) {
 
 		sentArpResult := false
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		fullScanner := scanner.NewFullScanner(
 			netInfo,
 			[]string{"172.17.1.1"},
 			[]string{"22"},
 			54321,
-			resultChan,
 			scanner.WithPacketCapture(cap),
 		)
+
+		resultChan := fullScanner.Results()
 
 		wg := sync.WaitGroup{}
 
