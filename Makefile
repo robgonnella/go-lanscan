@@ -11,7 +11,7 @@ go_deps = $(shell find . -name '*.go')
 
 tag = $(shell git describe --tags $(shell git rev-list --tags --max-count=1))
 
-flags = -ldflags '-s -w'
+flags ?= -ldflags '-s -w'
 
 #### Build Objects ####
 component = $(app_name)_$(tag)
@@ -51,6 +51,12 @@ $(prefix)/$(app_name): $(go_deps)
 # build main executable
 .PHONY: $(app_name)
 $(app_name): $(prefix)/$(app_name)
+
+# make static build
+.PHONY: static
+static:
+	$(MAKE) $(app_name) \
+		flags="-ldflags '-linkmode external -extldflags \"-static -s -w\"'"
 
 # installs main executable in user's default bin for golang
 .PHONY: install
