@@ -59,19 +59,18 @@ func (r *Results) MarshalJSON() ([]byte, error) {
 }
 
 type Core struct {
-	arpOnly     bool
-	printJson   bool
-	noProgress  bool
-	portLen     int
-	results     *Results
-	pw          progress.Writer
-	arpTracker  *progress.Tracker
-	synTracker  *progress.Tracker
-	scanResults chan *scanner.ScanResult
-	errorChan   chan error
-	scanner     scanner.Scanner
-	mux         *sync.RWMutex
-	log         logger.Logger
+	arpOnly    bool
+	printJson  bool
+	noProgress bool
+	portLen    int
+	results    *Results
+	pw         progress.Writer
+	arpTracker *progress.Tracker
+	synTracker *progress.Tracker
+	errorChan  chan error
+	scanner    scanner.Scanner
+	mux        *sync.RWMutex
+	log        logger.Logger
 }
 
 func New() *Core {
@@ -83,7 +82,6 @@ func New() *Core {
 
 func (c *Core) Initialize(
 	coreScanner scanner.Scanner,
-	scanResults chan *scanner.ScanResult,
 	targetLen int,
 	portLen int,
 	noProgress bool,
@@ -106,7 +104,6 @@ func (c *Core) Initialize(
 	}
 
 	c.scanner = coreScanner
-	c.scanResults = scanResults
 	c.results = results
 	c.errorChan = make(chan error)
 	c.portLen = portLen
@@ -139,7 +136,7 @@ OUTER:
 		select {
 		case err := <-c.errorChan:
 			return err
-		case res := <-c.scanResults:
+		case res := <-c.scanner.Results():
 			switch res.Type {
 			case scanner.ARPResult:
 				go c.processArpResult(res.Payload.(*scanner.ArpScanResult))
@@ -245,7 +242,7 @@ func (c *Core) processArpDone() {
 
 	if !c.arpOnly && len(c.results.Devices) == 0 {
 		go func() {
-			c.scanResults <- &scanner.ScanResult{
+			c.scanner.Results() <- &scanner.ScanResult{
 				Type: scanner.SYNDone,
 			}
 		}()

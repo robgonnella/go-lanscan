@@ -38,12 +38,9 @@ func TestOptions(t *testing.T) {
 	t.Run("sets options", func(st *testing.T) {
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
-		resultChan := make(chan *scanner.ScanResult)
-
 		scanner.NewArpScanner(
 			[]string{},
 			netInfo,
-			resultChan,
 			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
@@ -56,7 +53,6 @@ func TestOptions(t *testing.T) {
 			[]string{},
 			[]string{},
 			54321,
-			resultChan,
 			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
@@ -69,7 +65,6 @@ func TestOptions(t *testing.T) {
 			netInfo,
 			[]string{},
 			54321,
-			resultChan,
 			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),

@@ -122,7 +122,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			make(chan *scanner.ScanResult),
 			1,
 			1,
 			false,
@@ -138,7 +137,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			make(chan *scanner.ScanResult),
 			1,
 			1,
 			true,
@@ -152,7 +150,7 @@ func TestCore(t *testing.T) {
 
 		runner := core.New()
 
-		scanResults := make(chan *scanner.ScanResult)
+		mockScanner.EXPECT().Results()
 
 		mockScanner.EXPECT().SetRequestNotifications(gomock.Any())
 
@@ -162,7 +160,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			false,
@@ -181,6 +178,8 @@ func TestCore(t *testing.T) {
 		runner := core.New()
 
 		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
 
 		wg := sync.WaitGroup{}
 
@@ -224,7 +223,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			false,
@@ -246,6 +244,8 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
+
 		wg := sync.WaitGroup{}
 
 		wg.Add(1)
@@ -288,7 +288,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			false,
@@ -310,6 +309,8 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
+
 		wg := sync.WaitGroup{}
 
 		wg.Add(1)
@@ -337,7 +338,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			true,
@@ -359,6 +359,8 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
+
 		wg := sync.WaitGroup{}
 
 		wg.Add(3)
@@ -431,7 +433,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			false,
@@ -453,6 +454,8 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
+
 		wg := sync.WaitGroup{}
 
 		wg.Add(3)
@@ -524,7 +527,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			false,
@@ -545,6 +547,8 @@ func TestCore(t *testing.T) {
 		runner := core.New()
 
 		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
 
 		wg := sync.WaitGroup{}
 
@@ -597,7 +601,6 @@ func TestCore(t *testing.T) {
 
 		runner.Initialize(
 			mockScanner,
-			scanResults,
 			1,
 			1,
 			true,

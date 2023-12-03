@@ -53,6 +53,20 @@ func (mr *MockScannerMockRecorder) IncludeVendorInfo(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncludeVendorInfo", reflect.TypeOf((*MockScanner)(nil).IncludeVendorInfo), arg0)
 }
 
+// Results mocks base method.
+func (m *MockScanner) Results() chan *scanner.ScanResult {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Results")
+	ret0, _ := ret[0].(chan *scanner.ScanResult)
+	return ret0
+}
+
+// Results indicates an expected call of Results.
+func (mr *MockScannerMockRecorder) Results() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Results", reflect.TypeOf((*MockScanner)(nil).Results))
+}
+
 // Scan mocks base method.
 func (m *MockScanner) Scan() error {
 	m.ctrl.T.Helper()

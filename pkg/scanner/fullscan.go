@@ -16,22 +16,20 @@ import (
 )
 
 type FullScanner struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	targets             []string
-	ports               []string
-	listenPort          uint16
-	netInfo             network.Network
-	options             []ScannerOption
-	devices             []*ArpScanResult
-	arpScanner          *ArpScanner
-	synScanner          *SynScanner
-	internalScanResults chan *ScanResult
-	consumerResults     chan *ScanResult
-	errorChan           chan error
-	scanning            bool
-	scanningMux         *sync.RWMutex
-	deviceMux           *sync.RWMutex
+	ctx         context.Context
+	cancel      context.CancelFunc
+	targets     []string
+	ports       []string
+	listenPort  uint16
+	netInfo     network.Network
+	devices     []*ArpScanResult
+	arpScanner  *ArpScanner
+	synScanner  *SynScanner
+	results     chan *ScanResult
+	errorChan   chan error
+	scanning    bool
+	scanningMux *sync.RWMutex
+	deviceMux   *sync.RWMutex
 }
 
 func NewFullScanner(
@@ -39,36 +37,37 @@ func NewFullScanner(
 	targets,
 	ports []string,
 	listenPort uint16,
-	results chan *ScanResult,
 	options ...ScannerOption,
 ) *FullScanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	internalScanResults := make(chan *ScanResult)
-
 	arpScanner := NewArpScanner(
 		targets,
 		netInfo,
-		internalScanResults,
+	)
+
+	synScanner := NewSynScanner(
+		[]*ArpScanResult{},
+		netInfo,
+		ports,
+		listenPort,
 	)
 
 	scanner := &FullScanner{
-		ctx:                 ctx,
-		cancel:              cancel,
-		netInfo:             netInfo,
-		targets:             targets,
-		listenPort:          listenPort,
-		ports:               ports,
-		devices:             []*ArpScanResult{},
-		consumerResults:     results,
-		arpScanner:          arpScanner,
-		synScanner:          nil,
-		internalScanResults: internalScanResults,
-		errorChan:           make(chan error),
-		options:             options,
-		scanning:            false,
-		scanningMux:         &sync.RWMutex{},
-		deviceMux:           &sync.RWMutex{},
+		ctx:         ctx,
+		cancel:      cancel,
+		netInfo:     netInfo,
+		targets:     targets,
+		listenPort:  listenPort,
+		ports:       ports,
+		devices:     []*ArpScanResult{},
+		arpScanner:  arpScanner,
+		synScanner:  synScanner,
+		results:     make(chan *ScanResult),
+		errorChan:   make(chan error),
+		scanning:    false,
+		scanningMux: &sync.RWMutex{},
+		deviceMux:   &sync.RWMutex{},
 	}
 
 	for _, o := range options {
@@ -76,6 +75,10 @@ func NewFullScanner(
 	}
 
 	return scanner
+}
+
+func (s *FullScanner) Results() chan *ScanResult {
+	return s.results
 }
 
 func (s *FullScanner) Scan() error {
@@ -103,19 +106,22 @@ func (s *FullScanner) Scan() error {
 		select {
 		case <-s.ctx.Done():
 			return nil
-		case r := <-s.internalScanResults:
+		case r := <-s.arpScanner.Results():
 			switch r.Type {
 			case ARPResult:
 				go s.handleArpResult(r.Payload.(*ArpScanResult))
 			case ARPDone:
 				go s.handleArpDone()
+			}
+		case r := <-s.synScanner.Results():
+			switch r.Type {
 			case SYNResult:
 				go func() {
-					s.consumerResults <- r
+					s.results <- r
 				}()
 			case SYNDone:
 				go func() {
-					s.consumerResults <- r
+					s.results <- r
 				}()
 				return nil
 			default:
@@ -140,27 +146,27 @@ func (s *FullScanner) Stop() {
 
 func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {
 	s.arpScanner.SetRequestNotifications(cb)
-	s.options = append(s.options, WithRequestNotifications(cb))
+	s.synScanner.SetRequestNotifications(cb)
 }
 
 func (s *FullScanner) SetIdleTimeout(d time.Duration) {
 	s.arpScanner.SetIdleTimeout(d)
-	s.options = append(s.options, WithIdleTimeout(d))
+	s.synScanner.SetIdleTimeout(d)
 }
 
 func (s *FullScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	s.arpScanner.IncludeVendorInfo(repo)
-	s.options = append(s.options, WithVendorInfo(repo))
+	s.synScanner.IncludeVendorInfo(repo)
 }
 
 func (s *FullScanner) SetAccuracy(accuracy Accuracy) {
 	s.arpScanner.SetAccuracy(accuracy)
-	s.options = append(s.options, WithAccuracy(accuracy))
+	s.synScanner.SetAccuracy(accuracy)
 }
 
 func (s *FullScanner) SetPacketCapture(cap PacketCapture) {
 	s.arpScanner.SetPacketCapture(cap)
-	s.options = append(s.options, WithPacketCapture(cap))
+	s.synScanner.SetPacketCapture(cap)
 }
 
 func (s *FullScanner) handleArpDone() {
@@ -168,22 +174,15 @@ func (s *FullScanner) handleArpDone() {
 	defer s.deviceMux.RUnlock()
 
 	go func() {
-		s.consumerResults <- &ScanResult{
+		s.results <- &ScanResult{
 			Type: ARPDone,
 		}
 	}()
 
-	synScanner := NewSynScanner(
-		s.devices,
-		s.netInfo,
-		s.ports,
-		s.listenPort,
-		s.internalScanResults,
-		s.options...,
-	)
+	s.synScanner.SetTargets(s.devices)
 
 	go func() {
-		if err := synScanner.Scan(); err != nil {
+		if err := s.synScanner.Scan(); err != nil {
 			s.errorChan <- err
 		}
 	}()
@@ -194,7 +193,7 @@ func (s *FullScanner) handleArpResult(result *ArpScanResult) {
 	defer s.deviceMux.Unlock()
 
 	go func() {
-		s.consumerResults <- &ScanResult{
+		s.results <- &ScanResult{
 			Type:    ARPResult,
 			Payload: result,
 		}

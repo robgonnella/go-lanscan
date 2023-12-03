@@ -43,7 +43,6 @@ func TestRootCommand(t *testing.T) {
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
 			gomock.Any(),
-			gomock.Any(),
 			1,
 			false,
 			false,
@@ -86,7 +85,6 @@ func TestRootCommand(t *testing.T) {
 		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
 		mockRunner.EXPECT().Initialize(
-			gomock.Any(),
 			gomock.Any(),
 			1,
 			1,
@@ -141,7 +139,6 @@ func TestRootCommand(t *testing.T) {
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
 			gomock.Any(),
-			gomock.Any(),
 			1,
 			false,
 			false,
@@ -187,7 +184,6 @@ func TestRootCommand(t *testing.T) {
 		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
 		mockRunner.EXPECT().Initialize(
-			gomock.Any(),
 			gomock.Any(),
 			1,
 			1,
