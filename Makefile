@@ -48,7 +48,12 @@ all: $(app_name)
 
 # builds main executable
 $(prefix)/$(app_name): $(go_deps)
+ifeq ($(build_tags),)
+	go build $(flags) -o $(@)
+else
 	go build $(flags) -o $(@) -tags $(build_tags)
+endif
+
 
 # build main executable
 .PHONY: $(app_name)
