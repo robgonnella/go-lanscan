@@ -13,6 +13,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/thediveo/netdb"
 
+	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/oui"
@@ -32,10 +33,10 @@ type SynScanner struct {
 	scanning         bool
 	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
-	accuracy         time.Duration
 	scanningMux      *sync.RWMutex
 	packetSentAtMux  *sync.RWMutex
 	serviceQueryMux  *sync.Mutex
+	debug            logger.DebugLogger
 }
 
 func NewSynScanner(
@@ -59,10 +60,10 @@ func NewSynScanner(
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
-		accuracy:         time.Millisecond,
 		scanningMux:      &sync.RWMutex{},
 		packetSentAtMux:  &sync.RWMutex{},
 		serviceQueryMux:  &sync.Mutex{},
+		debug:            logger.NewDebugLogger(),
 	}
 
 	for _, o := range options {
@@ -77,6 +78,15 @@ func (s *SynScanner) Results() chan *ScanResult {
 }
 
 func (s *SynScanner) Scan() error {
+	fields := map[string]interface{}{
+		"interface": s.networkInfo.Interface().Name,
+		"cidr":      s.networkInfo.Cidr(),
+		"targets":   s.targets,
+		"ports":     s.ports,
+	}
+
+	s.debug.Info().Fields(fields).Msg("starting syn scan")
+
 	s.scanningMux.RLock()
 	scanning := s.scanning
 	s.scanningMux.RUnlock()
@@ -120,7 +130,7 @@ func (s *SynScanner) Scan() error {
 
 	go s.readPackets()
 
-	limiter := time.NewTicker(s.accuracy)
+	limiter := time.NewTicker(defaultAccuracy)
 	defer limiter.Stop()
 
 	for _, target := range s.targets {
@@ -161,10 +171,6 @@ func (s *SynScanner) SetRequestNotifications(cb func(a *Request)) {
 
 func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
-}
-
-func (s *SynScanner) SetAccuracy(accuracy Accuracy) {
-	s.accuracy = accuracy.Duration()
 }
 
 func (s *SynScanner) IncludeVendorInfo(repo oui.VendorRepo) {

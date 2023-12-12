@@ -1,0 +1,43 @@
+version: "3"
+
+services:
+  test-server-1:
+    build:
+      context: test-server
+      dockerfile: Dockerfile
+    environment:
+      PORT: '3232'
+    networks:
+      go-lanscan_default:
+
+  test-server-2:
+    build:
+      context: test-server
+      dockerfile: Dockerfile
+    environment:
+      PORT: '2323'
+    networks:
+      go-lanscan_default:
+
+  go-lanscan:
+    build:
+      args:
+        - BUILD_TAGS=debug
+      context: .
+      dockerfile: Dockerfile
+    command: --ports 2323,3232 --json
+    depends_on:
+      - test-server-1
+      - test-server-2
+    volumes:
+      - ./reports:/reports
+    networks:
+      go-lanscan_default:
+
+networks:
+  go-lanscan_default:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 172.18.0.1/28
+         gateway: 172.18.0.1

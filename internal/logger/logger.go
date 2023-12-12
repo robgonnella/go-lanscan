@@ -66,7 +66,9 @@ func SetBufferOutput(buf *bytes.Buffer) {
 
 // Reset resets logger to default values
 func Reset() {
-	zl := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+	consoleWriter := zerolog.ConsoleWriter{Out: os.Stderr}
+
+	zl := zerolog.New(consoleWriter).
 		With().
 		Timestamp().
 		Logger()

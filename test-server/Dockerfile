@@ -3,32 +3,17 @@
 ################################################################################
 FROM golang:1.21-alpine3.18 as builder
 
-ARG BUILD_TAGS
-
-RUN apk update && apk add \
-  make \
-  linux-headers \
-  musl-dev \
-  gcc \
-  libpcap-dev
-
 WORKDIR /app
 
-COPY internal internal
-COPY pkg pkg
-COPY go.mod go.sum main.go Makefile ./
+COPY main.go go.mod ./
 
-RUN make static build_tags="${BUILD_TAGS}"
+RUN go build -ldflags '-s -w'
 
 ################################################################################
 # Final
 ################################################################################
 FROM alpine:3.18
 
-RUN apk update && apk add ca-certificates
+COPY --from=builder /app/test-server /test-server
 
-COPY --from=builder /app/build/go-lanscan /scan
-
-RUN mkdir -p /reports
-
-ENTRYPOINT [ "/scan", "--out-file", "/reports/scan-report.json" ]
+ENTRYPOINT [ "/test-server" ]

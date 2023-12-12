@@ -33,7 +33,6 @@ type Scanner interface {
 	SetRequestNotifications(cb func(a *Request))
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(repo oui.VendorRepo)
-	SetAccuracy(accuracy Accuracy)
 	SetPacketCapture(cap PacketCapture)
 }
 

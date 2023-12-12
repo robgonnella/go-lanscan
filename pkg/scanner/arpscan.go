@@ -12,6 +12,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 
+	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/oui"
@@ -29,10 +30,10 @@ type ArpScanner struct {
 	scanning         bool
 	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
-	accuracy         time.Duration
 	vendorRepo       oui.VendorRepo
 	scanningMux      *sync.RWMutex
 	packetSentAtMux  *sync.RWMutex
+	debug            logger.DebugLogger
 }
 
 func NewArpScanner(
@@ -52,9 +53,9 @@ func NewArpScanner(
 		idleTimeout:      time.Second * 5,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
-		accuracy:         time.Millisecond,
 		scanningMux:      &sync.RWMutex{},
 		packetSentAtMux:  &sync.RWMutex{},
+		debug:            logger.NewDebugLogger(),
 	}
 
 	for _, o := range options {
@@ -69,6 +70,13 @@ func (s *ArpScanner) Results() chan *ScanResult {
 }
 
 func (s *ArpScanner) Scan() error {
+	fields := map[string]interface{}{
+		"interface": s.networkInfo.Interface().Name,
+		"cidr":      s.networkInfo.Cidr(),
+		"targets":   s.targets,
+	}
+	s.debug.Info().Fields(fields).Msg("starting arp scan")
+
 	s.scanningMux.RLock()
 	scanning := s.scanning
 	s.scanningMux.RUnlock()
@@ -99,7 +107,7 @@ func (s *ArpScanner) Scan() error {
 
 	go s.readPackets()
 
-	limiter := time.NewTicker(s.accuracy)
+	limiter := time.NewTicker(defaultAccuracy)
 	defer limiter.Stop()
 
 	if len(s.targets) == 0 {
@@ -146,10 +154,6 @@ func (s *ArpScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	if err := s.vendorRepo.UpdateVendors(); err != nil {
 		panic(err)
 	}
-}
-
-func (s *ArpScanner) SetAccuracy(accuracy Accuracy) {
-	s.accuracy = accuracy.Duration()
 }
 
 func (s *ArpScanner) SetPacketCapture(cap PacketCapture) {
