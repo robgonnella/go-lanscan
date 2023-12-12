@@ -28,6 +28,8 @@ func TestSynScanner(t *testing.T) {
 		HardwareAddr: net.HardwareAddr{},
 	}
 
+	cidr := "172.17.1.1/32"
+
 	mockUserIP := net.ParseIP("172.17.1.1")
 
 	t.Run("returns immediately if already scanning", func(st *testing.T) {
@@ -50,6 +52,7 @@ func TestSynScanner(t *testing.T) {
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(
@@ -102,6 +105,7 @@ func TestSynScanner(t *testing.T) {
 		mockErr := errors.New("mock open-live error")
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
@@ -137,6 +141,7 @@ func TestSynScanner(t *testing.T) {
 		mockErr := errors.New("mock SetBPFFilter error")
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
@@ -174,6 +179,7 @@ func TestSynScanner(t *testing.T) {
 		mockErr := errors.New("mock WritePacketData error")
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(
@@ -226,6 +232,7 @@ func TestSynScanner(t *testing.T) {
 		mockErr := errors.New("mock SerializeLayers error")
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(
@@ -285,6 +292,7 @@ func TestSynScanner(t *testing.T) {
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(
@@ -346,6 +354,7 @@ func TestSynScanner(t *testing.T) {
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(
@@ -407,6 +416,7 @@ func TestSynScanner(t *testing.T) {
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(
@@ -475,6 +485,7 @@ func TestSynScanner(t *testing.T) {
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
 		cap.EXPECT().OpenLive(

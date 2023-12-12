@@ -28,8 +28,8 @@ func Root(
 	var ifaceName string
 	var targets []string
 	var vendorInfo bool
-	var accuracy string
 	var arpOnly bool
+	var outFile string
 
 	cmd := &cobra.Command{
 		Use:   "go-lanscan",
@@ -52,19 +52,6 @@ func Root(
 				targets = []string{}
 			}
 
-			var scannerAccuracy scanner.Accuracy
-
-			switch strings.ToLower(accuracy) {
-			case "low":
-				scannerAccuracy = scanner.LOW_ACCURACY
-			case "medium":
-				scannerAccuracy = scanner.MEDIUM_ACCURACY
-			case "high":
-				scannerAccuracy = scanner.HIGH_ACCURACY
-			default:
-				scannerAccuracy = scanner.HIGH_ACCURACY
-			}
-
 			var coreScanner scanner.Scanner
 
 			if arpOnly {
@@ -72,7 +59,6 @@ func Root(
 					targets,
 					userNet,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-					scanner.WithAccuracy(scannerAccuracy),
 				)
 			} else {
 				coreScanner = scanner.NewFullScanner(
@@ -81,7 +67,6 @@ func Root(
 					portList,
 					listenPort,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
-					scanner.WithAccuracy(scannerAccuracy),
 				)
 			}
 
@@ -104,6 +89,7 @@ func Root(
 				noProgress,
 				arpOnly,
 				printJson,
+				outFile,
 			)
 
 			return runner.Run()
@@ -118,7 +104,7 @@ func Root(
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
 	cmd.Flags().StringVarP(&ifaceName, "interface", "i", userNet.Interface().Name, "set the interface for scanning")
 	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{userNet.Cidr()}, "set targets for scanning")
-	cmd.Flags().StringVar(&accuracy, "accuracy", "high", "sets throttle to ensure fewer packets are dropped. Valid values are high (slower more accurate), medium, low (faster less accurate)")
+	cmd.Flags().StringVar(&outFile, "out-file", "", "outputs final report to file")
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
 
 	cmd.AddCommand(newVersion())

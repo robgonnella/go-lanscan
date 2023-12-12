@@ -81,18 +81,6 @@ func (mr *MockScannerMockRecorder) Scan() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scan", reflect.TypeOf((*MockScanner)(nil).Scan))
 }
 
-// SetAccuracy mocks base method.
-func (m *MockScanner) SetAccuracy(arg0 scanner.Accuracy) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetAccuracy", arg0)
-}
-
-// SetAccuracy indicates an expected call of SetAccuracy.
-func (mr *MockScannerMockRecorder) SetAccuracy(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccuracy", reflect.TypeOf((*MockScanner)(nil).SetAccuracy), arg0)
-}
-
 // SetIdleTimeout mocks base method.
 func (m *MockScanner) SetIdleTimeout(arg0 time.Duration) {
 	m.ctrl.T.Helper()

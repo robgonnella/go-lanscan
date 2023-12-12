@@ -1,5 +1,5 @@
 # go-lanscan
-![Coverage](https://img.shields.io/badge/Coverage-90.6%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-91.2%25-brightgreen)
 
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.
@@ -62,10 +62,6 @@ sudo go-lanscan --no-progress --json
 
 # run only arp scanning (skip syn scanning)
 sudo go-lanscan --arp-only
-
-# set accuracy to low, which results in a faster scan but may
-# miss some open ports
-sudo go-lanscan --accuracy low
 ```
 
 ## Package Usage
@@ -165,30 +161,6 @@ queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
   option := scanner.WithVendorInfo(vendorRepo)
   option(arpScanner)
 ```
-
-- Set accuracy of scanning (LOW, MEDIUM, HIGH). Low results in a faster scan
-  but may miss some open ports. The default is HIGH. This option can be set
-  on any scanner
-
-```go
-  synScanner := scanner.NewSynScanner(
-    targets,
-    netInfo,
-    ports,
-    listenPort,
-    synResults,
-    synDone,
-    scanner.WithAccuracy(scanner.LOW_ACCURACY),
-  )
-
-  // or
-  synScanner.SetAccuracy(scanner.LOW_ACCURACY)
-
-  // or
-  option := scanner.WithAccuracy(scanner.LOW_ACCURACY)
-  option(synScanner)
-```
-
 
 [golang]:  https://go.dev/doc/install
 [libpcap]: https://github.com/the-tcpdump-group/libpcap

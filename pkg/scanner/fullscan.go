@@ -159,11 +159,6 @@ func (s *FullScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	s.synScanner.IncludeVendorInfo(repo)
 }
 
-func (s *FullScanner) SetAccuracy(accuracy Accuracy) {
-	s.arpScanner.SetAccuracy(accuracy)
-	s.synScanner.SetAccuracy(accuracy)
-}
-
 func (s *FullScanner) SetPacketCapture(cap PacketCapture) {
 	s.arpScanner.SetPacketCapture(cap)
 	s.synScanner.SetPacketCapture(cap)
