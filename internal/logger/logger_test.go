@@ -128,4 +128,12 @@ func TestLogger(t *testing.T) {
 		assert.NoError(st, err)
 		assert.Contains(st, string(output), testString)
 	})
+
+	t.Run("logs", func(st *testing.T) {
+		log := logger.New()
+		log.Debug().Msg("debug message")
+		log.Info().Msg("info message")
+		log.Error().Msg("error message")
+		log.Warn().Msg("warning message")
+	})
 }

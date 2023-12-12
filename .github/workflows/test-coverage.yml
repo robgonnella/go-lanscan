@@ -15,6 +15,7 @@ jobs:
         with:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
           fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
+          ref: ${{ github.head_ref }}
 
       - name: Setup go
         uses: actions/setup-go@v4
@@ -46,7 +47,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add README.md
-          git commit -m "chore: Updated coverage badge."
+          git commit --amend --no-edit
 
       - name: Push changes
         if: steps.verify-changed-files.outputs.files_changed == 'true'
@@ -54,3 +55,4 @@ jobs:
         with:
           github_token: ${{ github.token }}
           branch: ${{ github.head_ref }}
+          force: true
