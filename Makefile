@@ -13,6 +13,8 @@ tag = $(shell git describe --tags $(shell git rev-list --tags --max-count=1))
 
 flags ?= -ldflags '-s -w'
 
+build_tags ?=
+
 #### Build Objects ####
 component = $(app_name)_$(tag)
 component_path = $(prefix)/$(component)
@@ -46,7 +48,7 @@ all: $(app_name)
 
 # builds main executable
 $(prefix)/$(app_name): $(go_deps)
-	go build $(flags) -o $(@)
+	go build $(flags) -o $(@) -tags $(build_tags)
 
 # build main executable
 .PHONY: $(app_name)

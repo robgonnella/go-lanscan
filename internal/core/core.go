@@ -62,6 +62,7 @@ type Core struct {
 	arpOnly    bool
 	printJson  bool
 	noProgress bool
+	outFile    string
 	portLen    int
 	results    *Results
 	pw         progress.Writer
@@ -87,6 +88,7 @@ func (c *Core) Initialize(
 	noProgress bool,
 	arpOnly bool,
 	printJson bool,
+	outFile string,
 ) {
 	pw := progressWriter()
 
@@ -113,6 +115,7 @@ func (c *Core) Initialize(
 	c.noProgress = noProgress
 	c.arpOnly = arpOnly
 	c.printJson = printJson
+	c.outFile = outFile
 }
 
 func (c *Core) Run() error {
@@ -229,15 +232,13 @@ func (c *Core) processArpDone() {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
-	if !c.noProgress {
-		c.printArpResults()
+	c.printArpResults()
 
-		if !c.arpOnly && len(c.results.Devices) > 0 {
-			c.synTracker.Total = int64(
-				len(c.results.Devices) * c.portLen,
-			)
-			c.pw.AppendTracker(c.synTracker)
-		}
+	if !c.noProgress && !c.arpOnly && len(c.results.Devices) > 0 {
+		c.synTracker.Total = int64(
+			len(c.results.Devices) * c.portLen,
+		)
+		c.pw.AppendTracker(c.synTracker)
 	}
 
 	if !c.arpOnly && len(c.results.Devices) == 0 {
@@ -260,12 +261,10 @@ func (c *Core) requestCallback(r *scanner.Request) {
 
 		if c.arpTracker.IsDone() {
 			message = "arp - scan complete"
-			go func() {
-				// delay to print line after message is updated
-				time.AfterFunc(time.Millisecond*100, func() {
-					c.log.Info().Msg("compiling arp results...")
-				})
-			}()
+			// delay to print line after message is updated
+			time.AfterFunc(time.Millisecond*100, func() {
+				c.log.Info().Msg("compiling arp results...")
+			})
 		}
 
 		c.arpTracker.Message = message
@@ -280,12 +279,10 @@ func (c *Core) requestCallback(r *scanner.Request) {
 
 		if c.synTracker.IsDone() {
 			message = "syn - scan complete"
-			go func() {
-				// delay to print line after message is updated
-				time.AfterFunc(time.Millisecond*100, func() {
-					c.log.Info().Msg("compiling syn results...")
-				})
-			}()
+			// delay to print line after message is updated
+			time.AfterFunc(time.Millisecond*100, func() {
+				c.log.Info().Msg("compiling syn results...")
+			})
 		}
 
 		c.synTracker.Message = message
@@ -306,7 +303,16 @@ func (c *Core) printArpResults() {
 			}()
 		}
 
-		fmt.Println(string(data))
+		if !c.noProgress {
+			fmt.Println(string(data))
+		}
+
+		if c.arpOnly && c.outFile != "" {
+			if err := os.WriteFile(c.outFile, data, 0644); err != nil {
+				c.log.Error().Err(err).Msg("failed to write output report")
+			}
+		}
+
 		return
 	}
 
@@ -318,7 +324,14 @@ func (c *Core) printArpResults() {
 		arpTable.AppendRow(table.Row{t.IP.String(), t.MAC.String(), t.Vendor})
 	}
 
-	arpTable.Render()
+	output := arpTable.Render()
+
+	if c.arpOnly && c.outFile != "" {
+		if err := os.WriteFile(c.outFile, []byte(output), 0644); err != nil {
+			c.log.Error().Err(err).Msg("failed to write output report")
+		}
+
+	}
 }
 
 func (c *Core) printSynResults() {
@@ -335,6 +348,13 @@ func (c *Core) printSynResults() {
 		}
 
 		fmt.Println(string(data))
+
+		if c.outFile != "" {
+			if err := os.WriteFile(c.outFile, data, 0644); err != nil {
+				c.log.Error().Err(err).Msg("failed to write output report")
+			}
+		}
+
 		return
 	}
 
@@ -358,7 +378,13 @@ func (c *Core) printSynResults() {
 		})
 	}
 
-	synTable.Render()
+	output := synTable.Render()
+
+	if c.outFile != "" {
+		if err := os.WriteFile(c.outFile, []byte(output), 0644); err != nil {
+			c.log.Error().Err(err).Msg("failed to write output report")
+		}
+	}
 }
 
 // helpers

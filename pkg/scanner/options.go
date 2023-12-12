@@ -8,34 +8,12 @@ import (
 	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
+// How long to wait before sending next packet
+// the faster you send packets the more packets
+// will be missed when reading
+const defaultAccuracy = time.Millisecond * 100
+
 type ScannerOption = func(s Scanner)
-
-type Accuracy int
-
-const (
-	LOW_ACCURACY    Accuracy = 0
-	MEDIUM_ACCURACY Accuracy = 1
-	HIGH_ACCURACY   Accuracy = 2
-)
-
-func (a Accuracy) Duration() time.Duration {
-	switch a {
-	case LOW_ACCURACY:
-		return time.Microsecond * 100
-	case MEDIUM_ACCURACY:
-		return time.Microsecond * 500
-	case HIGH_ACCURACY:
-		return time.Millisecond
-	default:
-		return time.Millisecond
-	}
-}
-
-func WithAccuracy(accuracy Accuracy) ScannerOption {
-	return func(s Scanner) {
-		s.SetAccuracy(accuracy)
-	}
-}
 
 func WithRequestNotifications(cb func(a *Request)) ScannerOption {
 	return func(s Scanner) {

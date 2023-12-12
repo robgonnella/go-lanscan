@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
-	"sync"
+	"os"
 	"testing"
 	"time"
 
@@ -127,6 +127,7 @@ func TestCore(t *testing.T) {
 			false,
 			false,
 			false,
+			"",
 		)
 	})
 
@@ -142,6 +143,7 @@ func TestCore(t *testing.T) {
 			true,
 			true,
 			true,
+			"",
 		)
 	})
 
@@ -165,6 +167,7 @@ func TestCore(t *testing.T) {
 			false,
 			true,
 			false,
+			"",
 		)
 
 		err := runner.Run()
@@ -179,11 +182,13 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		outFile := "arp-report.txt"
+
+		defer func() {
+			os.RemoveAll(outFile)
+		}()
+
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
 
 		var callback func(r *scanner.Request)
 
@@ -201,21 +206,22 @@ func TestCore(t *testing.T) {
 				IP:   "172.17.0.1",
 			})
 
-			scanResults <- &scanner.ScanResult{
-				Type: scanner.ARPResult,
-				Payload: &scanner.ArpScanResult{
-					IP:     net.ParseIP("172.17.0.1"),
-					MAC:    mac,
-					Vendor: "Apple",
-				},
-			}
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPResult,
+					Payload: &scanner.ArpScanResult{
+						IP:     net.ParseIP("172.17.0.1"),
+						MAC:    mac,
+						Vendor: "Apple",
+					},
+				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
-				wg.Done()
 			})
+
 			return nil
 		})
 
@@ -228,13 +234,14 @@ func TestCore(t *testing.T) {
 			false,
 			true,
 			false,
+			outFile,
 		)
 
 		err := runner.Run()
 
 		assert.NoError(st, err)
 
-		wg.Wait()
+		assert.FileExists(st, outFile)
 	})
 
 	t.Run("performs arp only scan and prints json", func(st *testing.T) {
@@ -244,11 +251,13 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		outFile := "arp-report.json"
+
+		defer func() {
+			os.RemoveAll(outFile)
+		}()
+
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
 
 		var callback func(r *scanner.Request)
 
@@ -266,21 +275,22 @@ func TestCore(t *testing.T) {
 				IP:   "172.17.0.1",
 			})
 
-			scanResults <- &scanner.ScanResult{
-				Type: scanner.ARPResult,
-				Payload: &scanner.ArpScanResult{
-					IP:     net.ParseIP("172.17.0.1"),
-					MAC:    mac,
-					Vendor: "Apple",
-				},
-			}
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPResult,
+					Payload: &scanner.ArpScanResult{
+						IP:     net.ParseIP("172.17.0.1"),
+						MAC:    mac,
+						Vendor: "Apple",
+					},
+				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
-				wg.Done()
 			})
+
 			return nil
 		})
 
@@ -293,13 +303,14 @@ func TestCore(t *testing.T) {
 			false,
 			true,
 			true,
+			outFile,
 		)
 
 		err := runner.Run()
 
 		assert.NoError(st, err)
 
-		wg.Wait()
+		assert.FileExists(st, outFile)
 	})
 
 	t.Run("performs arp only scan and silences output", func(st *testing.T) {
@@ -309,11 +320,13 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		outFile := "arp-silent-report.txt"
+
+		defer func() {
+			os.RemoveAll(outFile)
+		}()
+
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(1)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
@@ -329,7 +342,6 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
-				wg.Done()
 			})
 			return nil
 		})
@@ -343,13 +355,13 @@ func TestCore(t *testing.T) {
 			true,
 			true,
 			true,
+			outFile,
 		)
 
 		err := runner.Run()
 
 		assert.NoError(st, err)
-
-		wg.Wait()
+		assert.FileExists(st, outFile)
 	})
 
 	t.Run("performs syn scan and prints text table", func(st *testing.T) {
@@ -359,11 +371,13 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		outFile := "syn-report.txt"
+
+		defer func() {
+			os.RemoveAll(outFile)
+		}()
+
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(3)
 
 		var callback func(r *scanner.Request)
 
@@ -388,22 +402,22 @@ func TestCore(t *testing.T) {
 				Port: 22,
 			})
 
-			scanResults <- &scanner.ScanResult{
-				Type: scanner.ARPResult,
-				Payload: &scanner.ArpScanResult{
-					IP:     ip,
-					MAC:    mac,
-					Vendor: "Apple",
-				},
-			}
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPResult,
+					Payload: &scanner.ArpScanResult{
+						IP:     ip,
+						MAC:    mac,
+						Vendor: "Apple",
+					},
+				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
-				wg.Done()
 			})
-			time.AfterFunc(time.Millisecond*200, func() {
+			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -417,13 +431,11 @@ func TestCore(t *testing.T) {
 						},
 					},
 				}
-				wg.Done()
 			})
-			time.AfterFunc(time.Millisecond*300, func() {
+			time.AfterFunc(time.Millisecond*400, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
-				wg.Done()
 			})
 
 			return nil
@@ -438,13 +450,14 @@ func TestCore(t *testing.T) {
 			false,
 			false,
 			false,
+			outFile,
 		)
 
 		err := runner.Run()
 
 		assert.NoError(st, err)
 
-		wg.Wait()
+		assert.FileExists(st, outFile)
 	})
 
 	t.Run("performs syn scan and prints json", func(st *testing.T) {
@@ -454,11 +467,13 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		outFile := "syn-report.json"
+
+		defer func() {
+			os.RemoveAll(outFile)
+		}()
+
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(3)
 
 		var callback func(r *scanner.Request)
 
@@ -483,21 +498,22 @@ func TestCore(t *testing.T) {
 				Port: 22,
 			})
 
-			scanResults <- &scanner.ScanResult{
-				Type: scanner.ARPResult,
-				Payload: &scanner.ArpScanResult{
-					IP:     ip,
-					MAC:    mac,
-					Vendor: "Apple",
-				},
-			}
 			time.AfterFunc(time.Millisecond*100, func() {
+				scanResults <- &scanner.ScanResult{
+					Type: scanner.ARPResult,
+					Payload: &scanner.ArpScanResult{
+						IP:     ip,
+						MAC:    mac,
+						Vendor: "Apple",
+					},
+				}
+			})
+			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
-				wg.Done()
 			})
-			time.AfterFunc(time.Millisecond*200, func() {
+			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -511,13 +527,11 @@ func TestCore(t *testing.T) {
 						},
 					},
 				}
-				wg.Done()
 			})
-			time.AfterFunc(time.Millisecond*300, func() {
+			time.AfterFunc(time.Millisecond*400, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
-				wg.Done()
 			})
 
 			return nil
@@ -532,13 +546,14 @@ func TestCore(t *testing.T) {
 			false,
 			false,
 			true,
+			outFile,
 		)
 
 		err := runner.Run()
 
 		assert.NoError(st, err)
 
-		wg.Wait()
+		assert.FileExists(st, outFile)
 	})
 
 	t.Run("performs syn scan silences output", func(st *testing.T) {
@@ -548,11 +563,13 @@ func TestCore(t *testing.T) {
 
 		scanResults := make(chan *scanner.ScanResult)
 
+		outFile := "syn-silent-report.txt"
+
+		defer func() {
+			os.RemoveAll(outFile)
+		}()
+
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
-
-		wg := sync.WaitGroup{}
-
-		wg.Add(3)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			ip := net.ParseIP("172.17.0.1")
@@ -569,7 +586,6 @@ func TestCore(t *testing.T) {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPDone,
 				}
-				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*200, func() {
 				scanResults <- &scanner.ScanResult{
@@ -585,13 +601,11 @@ func TestCore(t *testing.T) {
 						},
 					},
 				}
-				wg.Done()
 			})
 			time.AfterFunc(time.Millisecond*300, func() {
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNDone,
 				}
-				wg.Done()
 			})
 
 			return nil
@@ -606,12 +620,46 @@ func TestCore(t *testing.T) {
 			true,
 			false,
 			true,
+			outFile,
 		)
 
 		err := runner.Run()
 
 		assert.NoError(st, err)
+		assert.FileExists(st, outFile)
+	})
 
-		wg.Wait()
+	t.Run("exits syn scan quickly if no devices found", func(st *testing.T) {
+		mockScanner := mock_scanner.NewMockScanner(ctrl)
+
+		runner := core.New()
+
+		scanResults := make(chan *scanner.ScanResult)
+
+		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
+
+		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
+			scanResults <- &scanner.ScanResult{
+				Type: scanner.ARPDone,
+			}
+
+			return nil
+		})
+
+		mockScanner.EXPECT().Stop()
+
+		runner.Initialize(
+			mockScanner,
+			10,
+			10,
+			true,
+			false,
+			true,
+			"",
+		)
+
+		err := runner.Run()
+
+		assert.NoError(st, err)
 	})
 }

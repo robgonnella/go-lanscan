@@ -10,20 +10,8 @@ import (
 	mock_oui "github.com/robgonnella/go-lanscan/mock/oui"
 	mock_scanner "github.com/robgonnella/go-lanscan/mock/scanner"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
-
-func TestAccuracy(t *testing.T) {
-	t.Run("returns duration for accuracy type", func(st *testing.T) {
-		unknownAccuracy := scanner.Accuracy(3)
-
-		assert.Equal(st, time.Microsecond*100, scanner.LOW_ACCURACY.Duration())
-		assert.Equal(st, time.Microsecond*500, scanner.MEDIUM_ACCURACY.Duration())
-		assert.Equal(st, time.Millisecond, scanner.HIGH_ACCURACY.Duration())
-		assert.Equal(st, time.Millisecond, unknownAccuracy.Duration())
-	})
-}
 
 func TestOptions(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -41,7 +29,6 @@ func TestOptions(t *testing.T) {
 		scanner.NewArpScanner(
 			[]string{},
 			netInfo,
-			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
@@ -53,7 +40,6 @@ func TestOptions(t *testing.T) {
 			[]string{},
 			[]string{},
 			54321,
-			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
@@ -65,7 +51,6 @@ func TestOptions(t *testing.T) {
 			netInfo,
 			[]string{},
 			54321,
-			scanner.WithAccuracy(scanner.HIGH_ACCURACY),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(func(r *scanner.Request) {}),

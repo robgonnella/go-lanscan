@@ -27,7 +27,8 @@ func TestFullScanner(t *testing.T) {
 		HardwareAddr: net.HardwareAddr([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
 	}
 
-	_, mockIPNet, _ := net.ParseCIDR("172.17.1.1/32")
+	cidr := "172.17.1.1/32"
+	_, mockIPNet, _ := net.ParseCIDR(cidr)
 
 	mockUserIP := net.ParseIP("172.17.1.1")
 
@@ -47,6 +48,7 @@ func TestFullScanner(t *testing.T) {
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().IPNet().Return(mockIPNet)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
@@ -101,6 +103,7 @@ func TestFullScanner(t *testing.T) {
 		netInfo.EXPECT().Interface().Return(mockInterface).AnyTimes()
 		netInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
 		netInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
@@ -172,6 +175,7 @@ func TestFullScanner(t *testing.T) {
 		netInfo.EXPECT().Interface().Return(mockInterface).AnyTimes()
 		netInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		netInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
+		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
 		cap.EXPECT().OpenLive(
 			gomock.Any(),
