@@ -5,12 +5,12 @@ package scanner
 import (
 	"context"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"github.com/thediveo/netdb"
 
 	"github.com/robgonnella/go-lanscan/internal/logger"
@@ -18,6 +18,11 @@ import (
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
+
+type SynPacket struct {
+	Ip4 *layers.IPv4
+	TCP *layers.TCP
+}
 
 type SynScanner struct {
 	ctx              context.Context
@@ -29,7 +34,7 @@ type SynScanner struct {
 	cap              PacketCapture
 	handle           PacketCaptureHandle
 	resultChan       chan *ScanResult
-	notificationCB   func(a *Request)
+	requestNotifier  chan *Request
 	scanning         bool
 	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
@@ -102,7 +107,7 @@ func (s *SynScanner) Scan() error {
 		s.networkInfo.Interface().Name,
 		65536,
 		true,
-		s.idleTimeout,
+		pcap.BlockForever,
 	)
 
 	if err != nil {
@@ -165,8 +170,8 @@ func (s *SynScanner) Stop() {
 	}
 }
 
-func (s *SynScanner) SetRequestNotifications(cb func(a *Request)) {
-	s.notificationCB = cb
+func (s *SynScanner) SetRequestNotifications(c chan *Request) {
+	s.requestNotifier = c
 }
 
 func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
@@ -186,18 +191,60 @@ func (s *SynScanner) SetTargets(targets []*ArpScanResult) {
 }
 
 func (s *SynScanner) readPackets() {
-	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
-	packetSource.DecodeOptions.NoCopy = true
-	packetSource.DecodeOptions.Lazy = true
+	stopChan := make(chan struct{})
 
-	defer s.reset()
+	go func() {
+		for {
+			select {
+			case <-stopChan:
+				return
+			default:
+				var eth layers.Ethernet
+				var ip4 layers.IPv4
+				var tcp layers.TCP
+				var payload gopacket.Payload
+
+				parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &tcp, &payload)
+				decoded := []gopacket.LayerType{}
+				packetData, _, err := s.handle.ReadPacketData()
+
+				if err != nil {
+					s.debug.Error().Err(err).Msg("syn: read packet error")
+				}
+
+				err = parser.DecodeLayers(packetData, &decoded)
+
+				if err != nil {
+					s.debug.Error().Err(err).Msg("syn: decode packet error")
+				}
+
+				synPacket := &SynPacket{}
+
+				for _, layerType := range decoded {
+					switch layerType {
+					case layers.LayerTypeIPv4:
+						synPacket.Ip4 = &ip4
+					case layers.LayerTypeTCP:
+						synPacket.TCP = &tcp
+					}
+				}
+
+				if synPacket.Ip4 != nil && synPacket.TCP != nil {
+					go s.handlePacket(synPacket)
+				}
+			}
+		}
+	}()
+
+	defer func() {
+		stopChan <- struct{}{}
+		s.reset()
+	}()
 
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
-		case packet := <-packetSource.Packets():
-			go s.handlePacket(packet)
 		default:
 			s.packetSentAtMux.RLock()
 			packetSentAt := s.lastPacketSentAt
@@ -213,19 +260,13 @@ func (s *SynScanner) readPackets() {
 	}
 }
 
-func (s *SynScanner) handlePacket(packet gopacket.Packet) {
-	netLayer := packet.NetworkLayer()
-
-	if netLayer == nil {
-		return
-	}
-
-	srcIP := netLayer.NetworkFlow().Src().String()
+func (s *SynScanner) handlePacket(synPacket *SynPacket) {
+	srcIP := synPacket.Ip4.SrcIP
 
 	var targetIdx int
 
 	isExpected := util.SliceIncludesFunc(s.targets, func(t *ArpScanResult, i int) bool {
-		if t.IP.Equal(net.ParseIP(srcIP)) {
+		if t.IP.Equal(srcIP) {
 			targetIdx = i
 			return true
 		}
@@ -239,23 +280,23 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 
 	target := s.targets[targetIdx]
 
-	tcpLayer := packet.Layer(layers.LayerTypeTCP)
-
-	if tcpLayer == nil {
+	if synPacket.TCP.DstPort != layers.TCPPort(s.listenPort) {
 		return
 	}
 
-	tcp := tcpLayer.(*layers.TCP)
-
-	if tcp.DstPort != layers.TCPPort(s.listenPort) {
-		return
+	fields := map[string]interface{}{
+		"ip":   target.IP,
+		"port": synPacket.TCP.SrcPort.String(),
+		"open": synPacket.TCP.SYN && synPacket.TCP.ACK,
 	}
 
-	if tcp.SYN && tcp.ACK {
+	s.debug.Info().Fields(fields).Msg("received response")
+
+	if synPacket.TCP.SYN && synPacket.TCP.ACK {
 		serviceName := ""
 
 		s.serviceQueryMux.Lock()
-		service := netdb.ServiceByPort(int(tcp.SrcPort), "")
+		service := netdb.ServiceByPort(int(synPacket.TCP.SrcPort), "")
 		s.serviceQueryMux.Unlock()
 
 		if service != nil {
@@ -267,7 +308,7 @@ func (s *SynScanner) handlePacket(packet gopacket.Packet) {
 			IP:     target.IP,
 			Status: StatusOnline,
 			Port: Port{
-				ID:      uint16(tcp.SrcPort),
+				ID:      uint16(synPacket.TCP.SrcPort),
 				Service: serviceName,
 				Status:  PortOpen,
 			},
@@ -320,12 +361,14 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 		return err
 	}
 
-	if s.notificationCB != nil {
-		go s.notificationCB(&Request{
-			Type: SynRequest,
-			IP:   target.IP.String(),
-			Port: port,
-		})
+	if s.requestNotifier != nil {
+		go func() {
+			s.requestNotifier <- &Request{
+				Type: SynRequest,
+				IP:   target.IP.String(),
+				Port: port,
+			}
+		}()
 	}
 
 	return nil

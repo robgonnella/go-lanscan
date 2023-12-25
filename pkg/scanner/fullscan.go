@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/oui"
@@ -30,6 +31,7 @@ type FullScanner struct {
 	scanning    bool
 	scanningMux *sync.RWMutex
 	deviceMux   *sync.RWMutex
+	debug       logger.DebugLogger
 }
 
 func NewFullScanner(
@@ -68,6 +70,7 @@ func NewFullScanner(
 		scanning:    false,
 		scanningMux: &sync.RWMutex{},
 		deviceMux:   &sync.RWMutex{},
+		debug:       logger.NewDebugLogger(),
 	}
 
 	for _, o := range options {
@@ -142,11 +145,12 @@ func (s *FullScanner) Stop() {
 	if s.synScanner != nil {
 		s.synScanner.Stop()
 	}
+	s.debug.Info().Msg("all scanners stopped")
 }
 
-func (s *FullScanner) SetRequestNotifications(cb func(req *Request)) {
-	s.arpScanner.SetRequestNotifications(cb)
-	s.synScanner.SetRequestNotifications(cb)
+func (s *FullScanner) SetRequestNotifications(c chan *Request) {
+	s.arpScanner.SetRequestNotifications(c)
+	s.synScanner.SetRequestNotifications(c)
 }
 
 func (s *FullScanner) SetIdleTimeout(d time.Duration) {

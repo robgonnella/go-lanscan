@@ -28,6 +28,8 @@ func NewArpReplyReadResult(srcIP net.IP, srcHwAddr net.HardwareAddr) (data []byt
 		DstProtAddress:    []byte{192, 168, 1, 1},                     // Target IP address
 	}
 
+	var payload gopacket.Payload
+
 	buf := gopacket.NewSerializeBuffer()
 
 	opts := gopacket.SerializeOptions{
@@ -36,7 +38,7 @@ func NewArpReplyReadResult(srcIP net.IP, srcHwAddr net.HardwareAddr) (data []byt
 	}
 
 	// Serialize the ARP packet.
-	gopacket.SerializeLayers(buf, opts, &eth, &arp)
+	gopacket.SerializeLayers(buf, opts, &eth, &arp, &payload)
 
 	return buf.Bytes(), gopacket.CaptureInfo{}, nil
 }
@@ -60,6 +62,8 @@ func NewArpRequestReadResult() (data []byte, ci gopacket.CaptureInfo, err error)
 		DstProtAddress:    []byte{192, 168, 1, 1},                     // Target IP address
 	}
 
+	var payload gopacket.Payload
+
 	buf := gopacket.NewSerializeBuffer()
 
 	opts := gopacket.SerializeOptions{
@@ -68,7 +72,7 @@ func NewArpRequestReadResult() (data []byte, ci gopacket.CaptureInfo, err error)
 	}
 
 	// Serialize the ARP packet.
-	gopacket.SerializeLayers(buf, opts, &eth, &arp)
+	gopacket.SerializeLayers(buf, opts, &eth, &arp, &payload)
 
 	return buf.Bytes(), gopacket.CaptureInfo{}, nil
 }

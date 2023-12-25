@@ -106,7 +106,7 @@ func (mr *MockScannerMockRecorder) SetPacketCapture(arg0 any) *gomock.Call {
 }
 
 // SetRequestNotifications mocks base method.
-func (m *MockScanner) SetRequestNotifications(arg0 func(*scanner.Request)) {
+func (m *MockScanner) SetRequestNotifications(arg0 chan *scanner.Request) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetRequestNotifications", arg0)
 }
@@ -206,6 +206,22 @@ func (m *MockPacketCaptureHandle) WritePacketData(arg0 []byte) error {
 func (mr *MockPacketCaptureHandleMockRecorder) WritePacketData(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePacketData", reflect.TypeOf((*MockPacketCaptureHandle)(nil).WritePacketData), arg0)
+}
+
+// ZeroCopyReadPacketData mocks base method.
+func (m *MockPacketCaptureHandle) ZeroCopyReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ZeroCopyReadPacketData")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(gopacket.CaptureInfo)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ZeroCopyReadPacketData indicates an expected call of ZeroCopyReadPacketData.
+func (mr *MockPacketCaptureHandleMockRecorder) ZeroCopyReadPacketData() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZeroCopyReadPacketData", reflect.TypeOf((*MockPacketCaptureHandle)(nil).ZeroCopyReadPacketData))
 }
 
 // MockPacketCapture is a mock of PacketCapture interface.

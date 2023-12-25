@@ -30,7 +30,7 @@ type Scanner interface {
 	Scan() error
 	Stop()
 	Results() chan *ScanResult
-	SetRequestNotifications(cb func(a *Request))
+	SetRequestNotifications(c chan *Request)
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(repo oui.VendorRepo)
 	SetPacketCapture(cap PacketCapture)
@@ -39,6 +39,7 @@ type Scanner interface {
 type PacketCaptureHandle interface {
 	Close()
 	ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error)
+	ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error)
 	WritePacketData(data []byte) (err error)
 	SetBPFFilter(expr string) (err error)
 }
