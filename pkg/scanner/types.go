@@ -30,6 +30,7 @@ type Scanner interface {
 	Scan() error
 	Stop()
 	Results() chan *ScanResult
+	SetTiming(d time.Duration)
 	SetRequestNotifications(c chan *Request)
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(repo oui.VendorRepo)

@@ -3,17 +3,97 @@
 package cli
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 
 	"github.com/robgonnella/go-lanscan/internal/core"
+	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/network"
 	"github.com/robgonnella/go-lanscan/pkg/oui"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
 )
+
+func printConfiguration(
+	coreScanner scanner.Scanner,
+	targets []string,
+	cidr string,
+	ports []string,
+	ifaceName string,
+	listenPort uint16,
+	timing string,
+	vendorInfo,
+	printJson,
+	arpOnly,
+	progress bool,
+	outFile string,
+) {
+	var configTable = table.NewWriter()
+
+	configTable.SetOutputMirror(os.Stdout)
+
+	configTable.AppendRow(table.Row{
+		"scannerType",
+		fmt.Sprintf("%T", coreScanner),
+	})
+
+	configTable.AppendRow(table.Row{
+		"targets",
+		targets,
+	})
+
+	configTable.AppendRow(table.Row{
+		"cidr",
+		cidr,
+	})
+
+	configTable.AppendRow(table.Row{
+		"ports",
+		ports,
+	})
+
+	configTable.AppendRow(table.Row{
+		"interface",
+		ifaceName,
+	})
+
+	configTable.AppendRow(table.Row{
+		"listenPort",
+		listenPort,
+	})
+
+	configTable.AppendRow(table.Row{
+		"timing",
+		timing,
+	})
+
+	configTable.AppendRow(table.Row{
+		"vendorInfo",
+		vendorInfo,
+	})
+
+	configTable.AppendRow(table.Row{
+		"json",
+		printJson,
+	})
+
+	configTable.AppendRow(table.Row{
+		"arpOnly",
+		arpOnly,
+	})
+
+	configTable.AppendRow(table.Row{
+		"progress",
+		progress,
+	})
+
+	configTable.Render()
+}
 
 func Root(
 	runner core.Runner,
@@ -23,6 +103,7 @@ func Root(
 	var printJson bool
 	var noProgress bool
 	var ports string
+	var timing string
 	var idleTimeoutSeconds int
 	var listenPort uint16
 	var ifaceName string
@@ -36,6 +117,8 @@ func Root(
 		Short: "Scan your LAN!",
 		Long:  `CLI to scan your Local Area Network`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log := logger.New()
+
 			portList := strings.Split(ports, ",")
 
 			if ifaceName != userNet.Interface().Name {
@@ -74,6 +157,15 @@ func Root(
 				coreScanner.IncludeVendorInfo(vendorRepo)
 			}
 
+			timingDuration, err := time.ParseDuration(timing)
+
+			if err != nil {
+				log.Error().Err(err).Msg("invalid timing value")
+				return err
+			}
+
+			coreScanner.SetTiming(timingDuration)
+
 			portLen := util.PortTotal(portList)
 
 			targetLen := util.TotalTargets(targets)
@@ -92,10 +184,28 @@ func Root(
 				outFile,
 			)
 
+			if !noProgress {
+				printConfiguration(
+					coreScanner,
+					targets,
+					userNet.Cidr(),
+					portList,
+					userNet.Interface().Name,
+					listenPort,
+					timing,
+					vendorInfo,
+					printJson,
+					arpOnly,
+					!noProgress,
+					outFile,
+				)
+			}
+
 			return runner.Run()
 		},
 	}
 
+	cmd.Flags().StringVar(&timing, "timing", "100µs", "set time between packet sends - the faster you send the less accurate the result will be")
 	cmd.Flags().BoolVar(&printJson, "json", false, "output json instead of table text")
 	cmd.Flags().BoolVar(&arpOnly, "arp-only", false, "only perform arp scanning (skip syn scanning)")
 	cmd.Flags().BoolVar(&noProgress, "no-progress", false, "disable all output except for final results")

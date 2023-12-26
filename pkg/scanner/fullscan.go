@@ -148,6 +148,11 @@ func (s *FullScanner) Stop() {
 	s.debug.Info().Msg("all scanners stopped")
 }
 
+func (s *FullScanner) SetTiming(d time.Duration) {
+	s.arpScanner.SetTiming(d)
+	s.synScanner.SetTiming(d)
+}
+
 func (s *FullScanner) SetRequestNotifications(c chan *Request) {
 	s.arpScanner.SetRequestNotifications(c)
 	s.synScanner.SetRequestNotifications(c)

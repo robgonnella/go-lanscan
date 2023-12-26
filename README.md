@@ -1,5 +1,5 @@
 # go-lanscan
-![Coverage](https://img.shields.io/badge/Coverage-91.8%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-92.6%25-brightgreen)
 
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.
@@ -62,6 +62,13 @@ sudo go-lanscan --no-progress --json
 
 # run only arp scanning (skip syn scanning)
 sudo go-lanscan --arp-only
+
+# set timing - this is how fast packets are sent to hosts
+# default is 100µs between packets
+# the faster you send packets (shorter the timing), the less accurate the results will be
+sudo go-lanscan --timing 1ms # set to 1 millisecond
+sudo go-lanscan --timing 500µs # set to 500 microseconds
+sudo go-lanscan --timing 500us # alternate symbol for microseconds
 ```
 
 ## Package Usage
@@ -84,6 +91,31 @@ First you must install the following dependencies
 
 You can provide the following options to all scanners
 
+- Provide specific timing duration
+
+This option is used to set a specific time to wait between sending packets
+to hosts. The default is 100µs. The shorter the timing, the faster packets
+will be sent, and the less accurate your results will be
+
+```go
+  timing := time.Microsecond * 200
+
+  fullScanner := scanner.NewFullScanner(
+		netInfo,
+		targets,
+		ports,
+		listenPort,
+		scanner.WithTiming(timing),
+  )
+
+  // or
+  fullScanner.SetTiming(timing)
+
+  // or
+  option := scanner.WithTiming(timing)
+  option(fullScanner)
+```
+
 - Provide channel for notifications when packet requests are sent to target
 
 ```go
@@ -100,11 +132,11 @@ You can provide the following options to all scanners
   )
 
   // or
-  option := scanner.WithRequestNotifications(requests)
-  option(requests)
+  synScanner.SetRequestNotifications(requests)
 
   // or
-  synScanner.SetRequestNotifications(requests)
+  option := scanner.WithRequestNotifications(requests)
+  option(synScanner)
 ```
 
 - Provide your own idle timeout. If no packets are received from our targets

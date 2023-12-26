@@ -117,6 +117,18 @@ func (mr *MockScannerMockRecorder) SetRequestNotifications(arg0 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRequestNotifications", reflect.TypeOf((*MockScanner)(nil).SetRequestNotifications), arg0)
 }
 
+// SetTiming mocks base method.
+func (m *MockScanner) SetTiming(arg0 time.Duration) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTiming", arg0)
+}
+
+// SetTiming indicates an expected call of SetTiming.
+func (mr *MockScannerMockRecorder) SetTiming(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTiming", reflect.TypeOf((*MockScanner)(nil).SetTiming), arg0)
+}
+
 // Stop mocks base method.
 func (m *MockScanner) Stop() {
 	m.ctrl.T.Helper()
