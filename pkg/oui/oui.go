@@ -14,11 +14,14 @@ import (
 	kloui "github.com/klauspost/oui"
 )
 
+// nolint:all
+// OUIVendorRepo oui implementation of VendorRepo
 type OUIVendorRepo struct {
 	ouiTxt string
 	db     kloui.StaticDB
 }
 
+// NewOUIVendorRepo returns a new instance of OUIVendorRepo
 func NewOUIVendorRepo(ouiTxt string) (*OUIVendorRepo, error) {
 	repo := &OUIVendorRepo{ouiTxt: ouiTxt}
 
@@ -31,6 +34,7 @@ func NewOUIVendorRepo(ouiTxt string) (*OUIVendorRepo, error) {
 	return repo, nil
 }
 
+// UpdateVendors implements the UpdateVendors method in VendorRepo interface
 func (r *OUIVendorRepo) UpdateVendors() error {
 	dir := filepath.Dir(r.ouiTxt)
 
@@ -65,6 +69,7 @@ func (r *OUIVendorRepo) UpdateVendors() error {
 	return r.loadDatabase()
 }
 
+// Query implements the Query method in VendorRepo interface
 func (r *OUIVendorRepo) Query(mac net.HardwareAddr) (*VendorResult, error) {
 	result := &VendorResult{
 		Name: "unknown",

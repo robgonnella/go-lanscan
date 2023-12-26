@@ -38,14 +38,14 @@ func TestArpScanner(t *testing.T) {
 	mockIncludedArpSrcIP := net.ParseIP("172.17.1.1")
 
 	t.Run("returns immediately if already scanning", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		mockNetInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
@@ -53,13 +53,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -85,13 +85,13 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("returns error if PacketCapture.OpenLive return error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		mockErr := errors.New("mock open-live error")
@@ -99,7 +99,7 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
@@ -112,7 +112,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("prints debug message if reading packets returns error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -120,7 +120,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		wg := sync.WaitGroup{}
@@ -131,13 +131,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP)
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -172,7 +172,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("performs arp scan on default network info", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -180,7 +180,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		wg := sync.WaitGroup{}
@@ -191,13 +191,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP)
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -227,7 +227,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("performs arp scan on provided targets", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -235,7 +235,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		wg := sync.WaitGroup{}
@@ -245,13 +245,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -281,7 +281,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("ignores non arp reply packets", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -289,7 +289,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		wg := sync.WaitGroup{}
@@ -299,13 +299,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -332,7 +332,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("ignores arp reply packets that originate from scanning host", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -340,7 +340,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		wg := sync.WaitGroup{}
@@ -350,13 +350,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -386,7 +386,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("process valid arp reply packet", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -394,7 +394,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		wg := sync.WaitGroup{}
@@ -404,13 +404,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -440,7 +440,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("process valid arp reply packet and includes vendor info", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
@@ -451,7 +451,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 			scanner.WithVendorInfo(vendorRepo),
 		)
 
@@ -462,13 +462,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -505,7 +505,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("handles vendor query error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
@@ -516,7 +516,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 			scanner.WithVendorInfo(vendorRepo),
 		)
 
@@ -527,13 +527,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -568,7 +568,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("panics if fails to update static vendors", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -578,7 +578,7 @@ func TestArpScanner(t *testing.T) {
 			scanner.NewArpScanner(
 				[]string{"172.17.1.1"},
 				mockNetInfo,
-				scanner.WithPacketCapture(cap),
+				scanner.WithPacketCapture(capture),
 				scanner.WithVendorInfo(vendorRepo),
 			)
 		}
@@ -587,7 +587,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("sends request notifications", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -602,7 +602,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 			scanner.WithRequestNotifications(requestNotifier),
 		)
 
@@ -613,13 +613,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -649,7 +649,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("handles serialize layers error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -663,7 +663,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 			scanner.WithRequestNotifications(requestNotifier),
 		)
 
@@ -671,13 +671,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(
+		capture.EXPECT().SerializeLayers(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).
@@ -699,7 +699,7 @@ func TestArpScanner(t *testing.T) {
 	})
 
 	t.Run("handles write packet data error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -713,7 +713,7 @@ func TestArpScanner(t *testing.T) {
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 			scanner.WithRequestNotifications(requestNotifier),
 		)
 
@@ -721,13 +721,13 @@ func TestArpScanner(t *testing.T) {
 		mockNetInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
 			return errors.New("mock write packet data error")

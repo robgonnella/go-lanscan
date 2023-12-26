@@ -104,7 +104,7 @@ func (m *MockVersionGenerator) EXPECT() *MockVersionGeneratorMockRecorder {
 }
 
 // Generate mocks base method.
-func (m *MockVersionGenerator) Generate(arg0 version.VersionData) error {
+func (m *MockVersionGenerator) Generate(arg0 version.Data) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Generate", arg0)
 	ret0, _ := ret[0].(error)

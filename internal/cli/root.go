@@ -27,7 +27,7 @@ func printConfiguration(
 	listenPort uint16,
 	timing string,
 	vendorInfo,
-	printJson,
+	printJSON,
 	arpOnly,
 	progress bool,
 	outFile string,
@@ -78,7 +78,7 @@ func printConfiguration(
 
 	configTable.AppendRow(table.Row{
 		"json",
-		printJson,
+		printJSON,
 	})
 
 	configTable.AppendRow(table.Row{
@@ -91,15 +91,21 @@ func printConfiguration(
 		progress,
 	})
 
+	configTable.AppendRow(table.Row{
+		"outFile",
+		outFile,
+	})
+
 	configTable.Render()
 }
 
+// Root returns root command for cli
 func Root(
 	runner core.Runner,
 	userNet network.Network,
 	vendorRepo oui.VendorRepo,
 ) (*cobra.Command, error) {
-	var printJson bool
+	var printJSON bool
 	var noProgress bool
 	var ports []string
 	var timing string
@@ -177,7 +183,7 @@ func Root(
 				portLen,
 				noProgress,
 				arpOnly,
-				printJson,
+				printJSON,
 				outFile,
 			)
 
@@ -191,7 +197,7 @@ func Root(
 					listenPort,
 					timing,
 					vendorInfo,
-					printJson,
+					printJSON,
 					arpOnly,
 					!noProgress,
 					outFile,
@@ -203,7 +209,7 @@ func Root(
 	}
 
 	cmd.Flags().StringVar(&timing, "timing", "100µs", "set time between packet sends - the faster you send the less accurate the result will be")
-	cmd.Flags().BoolVar(&printJson, "json", false, "output json instead of table text")
+	cmd.Flags().BoolVar(&printJSON, "json", false, "output json instead of table text")
 	cmd.Flags().BoolVar(&arpOnly, "arp-only", false, "only perform arp scanning (skip syn scanning)")
 	cmd.Flags().BoolVar(&noProgress, "no-progress", false, "disable all output except for final results")
 	cmd.Flags().StringSliceVarP(&ports, "ports", "p", []string{"1-65535"}, "target ports")

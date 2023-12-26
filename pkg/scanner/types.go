@@ -12,20 +12,24 @@ import (
 
 //go:generate mockgen -destination=../../mock/scanner/scanner.go -package=mock_scanner . Scanner,PacketCaptureHandle,PacketCapture
 
+// RequestType represents a type of request packet sent to target
 type RequestType string
 
 const (
+	// ArpRequest represents an ARP request
 	ArpRequest RequestType = "ARP"
+	// SynRequest represents a SYN request
 	SynRequest RequestType = "SYN"
 )
 
+// Request represents a notification for a request packet sent to target host
 type Request struct {
 	Type RequestType
 	IP   string
 	Port uint16
 }
 
-// Scanner interface for scanning a network for devices
+// Scanner interface for scanning network devices
 type Scanner interface {
 	Scan() error
 	Stop()
@@ -37,6 +41,8 @@ type Scanner interface {
 	SetPacketCapture(cap PacketCapture)
 }
 
+// PacketCaptureHandle interface for writing and reading packets to and from
+// the wire
 type PacketCaptureHandle interface {
 	Close()
 	ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error)
@@ -45,6 +51,8 @@ type PacketCaptureHandle interface {
 	SetBPFFilter(expr string) (err error)
 }
 
+// PacketCapture interface for creating PacketCaptureHandles and
+// serializing packet layers
 type PacketCapture interface {
 	OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle PacketCaptureHandle, _ error)
 	SerializeLayers(w gopacket.SerializeBuffer, opts gopacket.SerializeOptions, layers ...gopacket.SerializableLayer) error
@@ -94,6 +102,7 @@ type ArpScanResult struct {
 	Vendor string
 }
 
+// Serializable returns a serializable version of ArpScanResult
 func (r *ArpScanResult) Serializable() interface{} {
 	return struct {
 		IP     string `json:"ip"`
@@ -106,15 +115,23 @@ func (r *ArpScanResult) Serializable() interface{} {
 	}
 }
 
+// ResultType represents a type of result sent through the result channel in
+// each scanner implementation
 type ResultType string
 
 const (
+	// ARPResult represents an ARP Result message
 	ARPResult ResultType = "ARP"
-	ARPDone   ResultType = "ARP_DONE"
+	// ARPDone represents an ARP Done message
+	ARPDone ResultType = "ARP_DONE"
+	// SYNResult represents an SYN Result message
 	SYNResult ResultType = "SYN"
-	SYNDone   ResultType = "SYN_DONE"
+	// SYNDone represents an SYN Done message
+	SYNDone ResultType = "SYN_DONE"
 )
 
+// ScanResult represents a scanning result sent through the results channel
+// in each in scanner implementation
 type ScanResult struct {
 	Type    ResultType
 	Payload any

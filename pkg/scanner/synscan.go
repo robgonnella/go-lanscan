@@ -19,11 +19,13 @@ import (
 	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
+// SynPacket represents a SYN packet response from one of the targeted hosts
 type SynPacket struct {
-	Ip4 *layers.IPv4
+	IP4 *layers.IPv4
 	TCP *layers.TCP
 }
 
+// SynScanner implements the Scanner interface for SYN scanning
 type SynScanner struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -45,12 +47,13 @@ type SynScanner struct {
 	debug            logger.DebugLogger
 }
 
+// NewSynScanner returns a new instance of SYNScanner
 func NewSynScanner(
 	targets []*ArpScanResult,
 	networkInfo network.Network,
 	ports []string,
 	listenPort uint16,
-	options ...ScannerOption,
+	options ...Option,
 ) *SynScanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -80,10 +83,13 @@ func NewSynScanner(
 	return scanner
 }
 
+// Results returns the channel for notifying when SYN responses are
+// received from targeted hosts
 func (s *SynScanner) Results() chan *ScanResult {
 	return s.resultChan
 }
 
+// Scan implements SYN scanning
 func (s *SynScanner) Scan() error {
 	fields := map[string]interface{}{
 		"interface": s.networkInfo.Interface().Name,
@@ -164,6 +170,7 @@ func (s *SynScanner) Scan() error {
 	return nil
 }
 
+// Stop stops the scanner
 func (s *SynScanner) Stop() {
 	s.cancel()
 
@@ -172,26 +179,34 @@ func (s *SynScanner) Stop() {
 	}
 }
 
+// SetTiming sets the timing duration for how long to wait in-between packet
+// sends for SYN requests
 func (s *SynScanner) SetTiming(d time.Duration) {
 	s.timing = d
 }
 
+// SetRequestNotifications sets the channel for notifying when SYN requests
+// are sent
 func (s *SynScanner) SetRequestNotifications(c chan *Request) {
 	s.requestNotifier = c
 }
 
+// SetIdleTimeout sets the idle timeout for this scanner
 func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
-func (s *SynScanner) IncludeVendorInfo(repo oui.VendorRepo) {
+// IncludeVendorInfo N/A for SYN scanner but here to satisfy Scanner interface
+func (s *SynScanner) IncludeVendorInfo(_ oui.VendorRepo) {
 	// nothing to do
 }
 
+// SetPacketCapture sets the packet capture implementation for this scanner
 func (s *SynScanner) SetPacketCapture(cap PacketCapture) {
 	s.cap = cap
 }
 
+// SetTargets sets the targets for SYN scanning
 func (s *SynScanner) SetTargets(targets []*ArpScanResult) {
 	s.targets = targets
 }
@@ -231,13 +246,13 @@ func (s *SynScanner) readPackets() {
 				for _, layerType := range decoded {
 					switch layerType {
 					case layers.LayerTypeIPv4:
-						synPacket.Ip4 = &ip4
+						synPacket.IP4 = &ip4
 					case layers.LayerTypeTCP:
 						synPacket.TCP = &tcp
 					}
 				}
 
-				if synPacket.Ip4 != nil && synPacket.TCP != nil {
+				if synPacket.IP4 != nil && synPacket.TCP != nil {
 					go s.handlePacket(synPacket)
 				}
 			}
@@ -269,7 +284,7 @@ func (s *SynScanner) readPackets() {
 }
 
 func (s *SynScanner) handlePacket(synPacket *SynPacket) {
-	srcIP := synPacket.Ip4.SrcIP
+	srcIP := synPacket.IP4.SrcIP
 
 	var targetIdx int
 
@@ -359,7 +374,9 @@ func (s *SynScanner) writePacketData(target *ArpScanResult, port uint16) error {
 		SYN:     true,
 	}
 
-	tcp.SetNetworkLayerForChecksum(&ip4)
+	if err := tcp.SetNetworkLayerForChecksum(&ip4); err != nil {
+		return err
+	}
 
 	if err := s.cap.SerializeLayers(buf, opts, &eth, &ip4, &tcp); err != nil {
 		return err

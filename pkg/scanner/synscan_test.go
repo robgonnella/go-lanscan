@@ -33,7 +33,7 @@ func TestSynScanner(t *testing.T) {
 	mockUserIP := net.ParseIP("172.17.1.1")
 
 	t.Run("returns immediately if already scanning", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -48,20 +48,20 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 		handle.EXPECT().Close().AnyTimes()
@@ -85,7 +85,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("returns error if PacketCapture.OpenLive return error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
 		synScanner := scanner.NewSynScanner(
@@ -99,7 +99,7 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		mockErr := errors.New("mock open-live error")
@@ -107,7 +107,7 @@ func TestSynScanner(t *testing.T) {
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
@@ -120,7 +120,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("prints debug message if reading packets returns error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -141,20 +141,20 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 		handle.EXPECT().Close().AnyTimes()
@@ -192,7 +192,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("returns error if SetBPFFilter returns error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -207,7 +207,7 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		mockErr := errors.New("mock SetBPFFilter error")
@@ -215,7 +215,7 @@ func TestSynScanner(t *testing.T) {
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
@@ -230,7 +230,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("returns error if WritePacketData returns error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -245,7 +245,7 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		mockErr := errors.New("mock WritePacketData error")
@@ -254,14 +254,14 @@ func TestSynScanner(t *testing.T) {
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
@@ -283,7 +283,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("returns error if SerializeLayers returns error", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -298,7 +298,7 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		mockErr := errors.New("mock SerializeLayers error")
@@ -307,7 +307,7 @@ func TestSynScanner(t *testing.T) {
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
@@ -315,7 +315,7 @@ func TestSynScanner(t *testing.T) {
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 
-		cap.EXPECT().SerializeLayers(
+		capture.EXPECT().SerializeLayers(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
@@ -340,7 +340,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("performs syn scan ", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -361,20 +361,20 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 		handle.EXPECT().Close().AnyTimes()
@@ -406,7 +406,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("ignores packet from unexpected target ", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -427,20 +427,20 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 		handle.EXPECT().Close().AnyTimes()
@@ -472,7 +472,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("ignores packet that have wrong destination port", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 		packetSent := false
@@ -493,20 +493,20 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 		handle.EXPECT().Close().AnyTimes()
@@ -538,7 +538,7 @@ func TestSynScanner(t *testing.T) {
 	})
 
 	t.Run("sends request notifications", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 		requestNotifier := make(chan *scanner.Request)
@@ -567,7 +567,7 @@ func TestSynScanner(t *testing.T) {
 			netInfo,
 			[]string{"22"},
 			listenPort,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 			scanner.WithRequestNotifications(requestNotifier),
 		)
 
@@ -575,13 +575,13 @@ func TestSynScanner(t *testing.T) {
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any())
 		handle.EXPECT().Close().AnyTimes()

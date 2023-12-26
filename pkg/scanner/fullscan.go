@@ -16,6 +16,7 @@ import (
 	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
+// FullScanner implements Scanner interface to perform both ARP and SYN scanning
 type FullScanner struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -34,12 +35,13 @@ type FullScanner struct {
 	debug       logger.DebugLogger
 }
 
+// NewFullScanner returns a new instance of FullScanner
 func NewFullScanner(
 	netInfo network.Network,
 	targets,
 	ports []string,
 	listenPort uint16,
-	options ...ScannerOption,
+	options ...Option,
 ) *FullScanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -80,10 +82,12 @@ func NewFullScanner(
 	return scanner
 }
 
+// Results returns the channel used for notifying of new scan results
 func (s *FullScanner) Results() chan *ScanResult {
 	return s.results
 }
 
+// Scan implements ARP and SYN scanning
 func (s *FullScanner) Scan() error {
 	s.scanningMux.RLock()
 	scanning := s.scanning
@@ -136,6 +140,7 @@ func (s *FullScanner) Scan() error {
 	}
 }
 
+// Stop stops the scanner
 func (s *FullScanner) Stop() {
 	s.cancel()
 
@@ -148,26 +153,33 @@ func (s *FullScanner) Stop() {
 	s.debug.Info().Msg("all scanners stopped")
 }
 
+// SetTiming sets the timing duration for how long to wait in-between packet
+// sends for both ARP & SYN requests
 func (s *FullScanner) SetTiming(d time.Duration) {
 	s.arpScanner.SetTiming(d)
 	s.synScanner.SetTiming(d)
 }
 
+// SetRequestNotifications sets the channel for notifying when SYN & ARP
+// requests are sent
 func (s *FullScanner) SetRequestNotifications(c chan *Request) {
 	s.arpScanner.SetRequestNotifications(c)
 	s.synScanner.SetRequestNotifications(c)
 }
 
+// SetIdleTimeout sets the idle timeout for ARP and SYN scanning
 func (s *FullScanner) SetIdleTimeout(d time.Duration) {
 	s.arpScanner.SetIdleTimeout(d)
 	s.synScanner.SetIdleTimeout(d)
 }
 
+// IncludeVendorInfo sets whether or not to include vendor info when scanning
 func (s *FullScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	s.arpScanner.IncludeVendorInfo(repo)
 	s.synScanner.IncludeVendorInfo(repo)
 }
 
+// SetPacketCapture sets the packet capture implementation for this scanner
 func (s *FullScanner) SetPacketCapture(cap PacketCapture) {
 	s.arpScanner.SetPacketCapture(cap)
 	s.synScanner.SetPacketCapture(cap)

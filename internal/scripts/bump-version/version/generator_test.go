@@ -32,7 +32,7 @@ func TestTemplateGenerator(t *testing.T) {
 
 	generator := version.NewTemplateGenerator(outFile, templatePath)
 
-	data := version.VersionData{
+	data := version.Data{
 		VERSION: "v2.2.2",
 	}
 

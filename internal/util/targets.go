@@ -30,6 +30,7 @@ func LoopNetIPHosts(ipnet *net.IPNet, f func(ip net.IP) error) error {
 func IPHostTotal(ipnet *net.IPNet) int {
 	total := 0
 
+	// nolint:errcheck
 	LoopNetIPHosts(ipnet, func(ip net.IP) error {
 		total++
 		return nil
@@ -38,6 +39,7 @@ func IPHostTotal(ipnet *net.IPNet) int {
 	return total
 }
 
+// LoopTargets helper to prevent storing entire target list in memory
 func LoopTargets(targets []string, f func(target net.IP) error) error {
 	for _, t := range targets {
 		if cidrSuffix.MatchString(t) {
@@ -75,9 +77,12 @@ func LoopTargets(targets []string, f func(target net.IP) error) error {
 	return nil
 }
 
+// TotalTargets returns count of targets - helper to prevent storing entire
+// target list in memory
 func TotalTargets(targets []string) int {
 	total := 0
 
+	// nolint:errcheck
 	LoopTargets(targets, func(ip net.IP) error {
 		total++
 		return nil
@@ -86,8 +91,11 @@ func TotalTargets(targets []string) int {
 	return total
 }
 
+// TargetsHas helper to determine if targets list includes a specific net.IP
 func TargetsHas(targets []string, t net.IP) bool {
 	has := false
+
+	// nolint:errcheck
 	LoopTargets(targets, func(v net.IP) error {
 		if v.Equal(t) {
 			has = true
@@ -143,6 +151,7 @@ func LoopPorts(ports []string, f func(p uint16) error) error {
 func PortTotal(ports []string) int {
 	total := 0
 
+	// nolint:errcheck
 	LoopPorts(ports, func(p uint16) error {
 		total++
 		return nil

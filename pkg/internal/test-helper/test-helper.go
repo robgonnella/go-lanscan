@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package test_helper
+package testhelper
 
 import (
 	"net"
@@ -9,6 +9,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+// NewArpReplyReadResult creates mock ARP reply packet data
 func NewArpReplyReadResult(srcIP net.IP, srcHwAddr net.HardwareAddr) (data []byte, ci gopacket.CaptureInfo, err error) {
 	eth := layers.Ethernet{
 		SrcMAC:       srcHwAddr,
@@ -43,6 +44,7 @@ func NewArpReplyReadResult(srcIP net.IP, srcHwAddr net.HardwareAddr) (data []byt
 	return buf.Bytes(), gopacket.CaptureInfo{}, nil
 }
 
+// NewArpRequestReadResult creates mock ARP request packet data
 func NewArpRequestReadResult() (data []byte, ci gopacket.CaptureInfo, err error) {
 	eth := layers.Ethernet{
 		SrcMAC:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -77,6 +79,7 @@ func NewArpRequestReadResult() (data []byte, ci gopacket.CaptureInfo, err error)
 	return buf.Bytes(), gopacket.CaptureInfo{}, nil
 }
 
+// NewSynWithAckResponsePacketBytes creates mock SYN response packet data
 func NewSynWithAckResponsePacketBytes(
 	srcIP net.IP,
 	srcPort uint16,

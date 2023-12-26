@@ -89,7 +89,7 @@ mock:
 
 .PHONY: lint
 lint:
-	golint -set_exit_status ./...
+	golangci-lint run
 
 .PHONY: test
 test:
@@ -116,7 +116,9 @@ test-report:
 .PHONY: deps
 deps:
 	go install go.uber.org/mock/mockgen@latest
-	go install golang.org/x/lint/golint@latest
+	curl \
+		-sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(shell go env GOPATH)/bin v1.55.2
 
 # remove buid directory and installed executable
 .PHONY: clean

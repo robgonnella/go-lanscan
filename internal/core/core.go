@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// DeviceResult represents a discovered network device
 type DeviceResult struct {
 	IP        net.IP           `json:"ip"`
 	MAC       net.HardwareAddr `json:"mac"`
@@ -28,6 +29,7 @@ type DeviceResult struct {
 	OpenPorts []scanner.Port   `json:"openPorts"`
 }
 
+// Serializable returns a serializable version of DeviceResult
 func (r *DeviceResult) Serializable() interface{} {
 	return struct {
 		IP        string         `json:"ip"`
@@ -44,10 +46,12 @@ func (r *DeviceResult) Serializable() interface{} {
 	}
 }
 
+// Results data structure for holding discovered network devices
 type Results struct {
 	Devices []*DeviceResult `json:"devices"`
 }
 
+// MarshalJSON returns marshaled JSON of Results
 func (r *Results) MarshalJSON() ([]byte, error) {
 	data := []interface{}{}
 
@@ -58,9 +62,10 @@ func (r *Results) MarshalJSON() ([]byte, error) {
 	return json.Marshal(data)
 }
 
+// Core implements the Runner interface for performing network scanning
 type Core struct {
 	arpOnly         bool
-	printJson       bool
+	printJSON       bool
 	noProgress      bool
 	outFile         string
 	portLen         int
@@ -75,6 +80,7 @@ type Core struct {
 	log             logger.Logger
 }
 
+// New returns a new instance of Core
 func New() *Core {
 	return &Core{
 		requestNotifier: make(chan *scanner.Request),
@@ -83,13 +89,14 @@ func New() *Core {
 	}
 }
 
+// Initialize initializes the Core before performing network scanning
 func (c *Core) Initialize(
 	coreScanner scanner.Scanner,
 	targetLen int,
 	portLen int,
 	noProgress bool,
 	arpOnly bool,
-	printJson bool,
+	printJSON bool,
 	outFile string,
 ) {
 	pw := progressWriter()
@@ -116,10 +123,11 @@ func (c *Core) Initialize(
 	c.synTracker = &progress.Tracker{Message: "starting syn scan"}
 	c.noProgress = noProgress
 	c.arpOnly = arpOnly
-	c.printJson = printJson
+	c.printJSON = printJSON
 	c.outFile = outFile
 }
 
+// Run executes a network scan
 func (c *Core) Run() error {
 	start := time.Now()
 
@@ -256,7 +264,7 @@ func (c *Core) printArpResults() {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
-	if c.printJson {
+	if c.printJSON {
 		data, err := c.results.MarshalJSON()
 
 		if err != nil {
@@ -300,7 +308,7 @@ func (c *Core) printSynResults() {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
-	if c.printJson {
+	if c.printJSON {
 		data, err := c.results.MarshalJSON()
 
 		if err != nil {
