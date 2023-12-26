@@ -16,33 +16,41 @@ const defaultTiming = time.Microsecond * 100
 // If no packets are received for this period of time, exit with timeout
 const defaultIdleTimeout = time.Second * 5
 
-type ScannerOption = func(s Scanner)
+// Option represents an option that can be passed to any of the
+// "New" scanner constructors
+type Option = func(s Scanner)
 
-func WithRequestNotifications(c chan *Request) ScannerOption {
+// WithRequestNotifications sets channel for request notifications
+func WithRequestNotifications(c chan *Request) Option {
 	return func(s Scanner) {
 		s.SetRequestNotifications(c)
 	}
 }
 
-func WithIdleTimeout(duration time.Duration) ScannerOption {
+// WithIdleTimeout sets the idle timeout for the scanner
+func WithIdleTimeout(duration time.Duration) Option {
 	return func(s Scanner) {
 		s.SetIdleTimeout(duration)
 	}
 }
 
-func WithVendorInfo(repo oui.VendorRepo) ScannerOption {
+// WithVendorInfo sets whether or not to include vendor info when scanning
+func WithVendorInfo(repo oui.VendorRepo) Option {
 	return func(s Scanner) {
 		s.IncludeVendorInfo(repo)
 	}
 }
 
-func WithPacketCapture(cap PacketCapture) ScannerOption {
+// WithPacketCapture sets the packet capture implementation for the scanner
+func WithPacketCapture(cap PacketCapture) Option {
 	return func(s Scanner) {
 		s.SetPacketCapture(cap)
 	}
 }
 
-func WithTiming(duration time.Duration) ScannerOption {
+// WithTiming sets the timing duration for how long to wait in-between each
+// packet send
+func WithTiming(duration time.Duration) Option {
 	return func(s Scanner) {
 		s.SetTiming(duration)
 	}

@@ -51,7 +51,7 @@ func TestBumpVersion(t *testing.T) {
 			TemplatePath: templatePath,
 		}
 
-		data := version.VersionData{
+		data := version.Data{
 			VERSION: versionStr,
 		}
 
@@ -81,7 +81,7 @@ func TestBumpVersion(t *testing.T) {
 			TemplatePath: templatePath,
 		}
 
-		data := version.VersionData{
+		data := version.Data{
 			VERSION: versionStr,
 		}
 
@@ -109,7 +109,7 @@ func TestBumpVersion(t *testing.T) {
 			TemplatePath: templatePath,
 		}
 
-		data := version.VersionData{
+		data := version.Data{
 			VERSION: versionStr,
 		}
 
@@ -138,7 +138,7 @@ func TestBumpVersion(t *testing.T) {
 			TemplatePath: templatePath,
 		}
 
-		data := version.VersionData{
+		data := version.Data{
 			VERSION: versionStr,
 		}
 
@@ -170,7 +170,7 @@ func TestBumpVersion(t *testing.T) {
 			TemplatePath: templatePath,
 		}
 
-		data := version.VersionData{
+		data := version.Data{
 			VERSION: versionStr,
 		}
 

@@ -6,6 +6,7 @@ import "net"
 
 //go:generate mockgen -destination=../../mock/network/network.go -package=mock_network . Network
 
+// Network interface for accessing network properties
 type Network interface {
 	Hostname() string
 	Interface() *net.Interface

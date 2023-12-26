@@ -33,7 +33,7 @@ func TestFullScanner(t *testing.T) {
 	mockUserIP := net.ParseIP("172.17.1.1")
 
 	t.Run("returns immediately if already scanning", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -42,7 +42,7 @@ func TestFullScanner(t *testing.T) {
 			[]string{},
 			[]string{},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		netInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
@@ -50,13 +50,13 @@ func TestFullScanner(t *testing.T) {
 		netInfo.EXPECT().UserIP().Return(mockUserIP)
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil)
 
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any()).AnyTimes()
 		handle.EXPECT().Close().AnyTimes()
@@ -80,7 +80,7 @@ func TestFullScanner(t *testing.T) {
 	})
 
 	t.Run("performs full scan on default network for all ports", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -91,7 +91,7 @@ func TestFullScanner(t *testing.T) {
 			[]string{},
 			[]string{},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		resultChan := fullScanner.Results()
@@ -105,14 +105,14 @@ func TestFullScanner(t *testing.T) {
 		netInfo.EXPECT().UserIP().Return(mockUserIP).AnyTimes()
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any()).AnyTimes()
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 
@@ -152,7 +152,7 @@ func TestFullScanner(t *testing.T) {
 	})
 
 	t.Run("performs full scan on provided targets and ports", func(st *testing.T) {
-		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 
@@ -163,7 +163,7 @@ func TestFullScanner(t *testing.T) {
 			[]string{"172.17.1.1"},
 			[]string{"22"},
 			54321,
-			scanner.WithPacketCapture(cap),
+			scanner.WithPacketCapture(capture),
 		)
 
 		resultChan := fullScanner.Results()
@@ -177,14 +177,14 @@ func TestFullScanner(t *testing.T) {
 		netInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
 		netInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
 
-		cap.EXPECT().OpenLive(
+		capture.EXPECT().OpenLive(
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any(),
 			gomock.Any()).Return(handle, nil).AnyTimes()
 
 		handle.EXPECT().SetBPFFilter(gomock.Any()).AnyTimes()
-		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		capture.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 		handle.EXPECT().Close().AnyTimes()
 

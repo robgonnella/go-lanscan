@@ -7,12 +7,15 @@ import (
 	"fmt"
 )
 
+// BumpData represents the data required to perform a version bump for this
+// library
 type BumpData struct {
 	Version      string
 	OutFile      string
 	TemplatePath string
 }
 
+// Bump executes a version bump for this library
 func Bump(data BumpData, vg VersionGenerator, vc VersionControl) error {
 	if string(data.Version[0]) != "v" {
 		return errors.New("version must begin with a \"v\"")

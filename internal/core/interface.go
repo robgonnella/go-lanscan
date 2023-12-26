@@ -6,6 +6,7 @@ import "github.com/robgonnella/go-lanscan/pkg/scanner"
 
 //go:generate mockgen -destination=../mock/core/core.go -package=mock_core . Runner
 
+// Runner interface for performing network scanning
 type Runner interface {
 	Initialize(
 		coreScanner scanner.Scanner,
@@ -13,7 +14,7 @@ type Runner interface {
 		portLen int,
 		noProgress bool,
 		arpOnly bool,
-		printJson bool,
+		printJSON bool,
 		outFile string,
 	)
 	Run() error

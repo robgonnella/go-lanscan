@@ -12,6 +12,7 @@ import (
 	"github.com/jackpal/gateway"
 )
 
+// IncrementIP increments a net.IP by 1
 func IncrementIP(ip net.IP) {
 	for j := len(ip) - 1; j >= 0; j-- {
 		ip[j]++

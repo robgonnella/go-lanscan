@@ -7,6 +7,8 @@ import (
 	"path"
 )
 
+// GetDefaultVendorRepo returns the default implementation of VendorRepo
+// which uses github.com/klauspost/oui
 func GetDefaultVendorRepo() (*OUIVendorRepo, error) {
 	ouiTxt, err := GetDefaultOuiTxtPath()
 
@@ -23,6 +25,7 @@ func GetDefaultVendorRepo() (*OUIVendorRepo, error) {
 	return repo, nil
 }
 
+// GetDefaultOuiTxtPath returns the default path for the static oui.txt database
 func GetDefaultOuiTxtPath() (*string, error) {
 	home, err := os.UserHomeDir()
 

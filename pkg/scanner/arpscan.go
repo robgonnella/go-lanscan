@@ -19,6 +19,7 @@ import (
 	"github.com/robgonnella/go-lanscan/pkg/oui"
 )
 
+// ArpScanner implements the Scanner interface for ARP scanning
 type ArpScanner struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -38,10 +39,11 @@ type ArpScanner struct {
 	debug            logger.DebugLogger
 }
 
+// NewArpScanner returns a new instance of ArpScanner
 func NewArpScanner(
 	targets []string,
 	networkInfo network.Network,
-	options ...ScannerOption,
+	options ...Option,
 ) *ArpScanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -68,10 +70,13 @@ func NewArpScanner(
 	return scanner
 }
 
+// Results returns the results channel for notifying when a
+// target arp reply is detected
 func (s *ArpScanner) Results() chan *ScanResult {
 	return s.resultChan
 }
 
+// Scan implements the Scan method for ARP scanning
 func (s *ArpScanner) Scan() error {
 	fields := map[string]interface{}{
 		"interface": s.networkInfo.Interface().Name,
@@ -136,6 +141,7 @@ func (s *ArpScanner) Scan() error {
 	return err
 }
 
+// Stop stops the scanner
 func (s *ArpScanner) Stop() {
 	s.cancel()
 
@@ -144,18 +150,24 @@ func (s *ArpScanner) Stop() {
 	}
 }
 
+// SetTiming sets the timing duration for how long to wait in-between packet
+// sends for ARP requests
 func (s *ArpScanner) SetTiming(d time.Duration) {
 	s.timing = d
 }
 
+// SetRequestNotifications sets the channel for notifying when ARP
+// requests are sent
 func (s *ArpScanner) SetRequestNotifications(c chan *Request) {
 	s.requestNotifier = c
 }
 
+// SetIdleTimeout sets the idle timeout for this scanner
 func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
 }
 
+// IncludeVendorInfo sets whether or not to include vendor info in the scan
 func (s *ArpScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	s.vendorRepo = repo
 	if err := s.vendorRepo.UpdateVendors(); err != nil {
@@ -163,6 +175,7 @@ func (s *ArpScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 	}
 }
 
+// SetPacketCapture sets the data structure used for capture packets
 func (s *ArpScanner) SetPacketCapture(cap PacketCapture) {
 	s.cap = cap
 }

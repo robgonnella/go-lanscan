@@ -1,0 +1,20 @@
+linters:
+  enable:
+    - revive
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - errcheck
+    - path: '(.+)test-helper.go'
+      linters:
+        - errcheck
+  include:
+      - EXC0012  # EXC0012 revive: Annoying issue about not having a comment. The rare codebase has such comments
+      - EXC0013  # EXC0013 revive: Annoying issue about not having a comment. The rare codebase has such comments
+      - EXC0014  # EXC0014 revive: Annoying issue about not having a comment. The rare codebase has such comments
+      - EXC0015  # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments

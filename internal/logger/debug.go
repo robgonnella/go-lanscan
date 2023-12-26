@@ -29,12 +29,15 @@ func init() {
 	}
 }
 
-func NewDebugLogger() DebugLogger {
-	return debugLogger
-}
-
+// DebugLogger represents a Logger implementation that is only turned on
+// when build with the "debug" tag
 type DebugLogger struct {
 	zl *zerolog.Logger
+}
+
+// NewDebugLogger returns a instance of DebugLogger
+func NewDebugLogger() DebugLogger {
+	return debugLogger
 }
 
 // Info wrapper around zerolog Info
