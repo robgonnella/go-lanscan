@@ -5,7 +5,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/table"
@@ -102,7 +101,7 @@ func Root(
 ) (*cobra.Command, error) {
 	var printJson bool
 	var noProgress bool
-	var ports string
+	var ports []string
 	var timing string
 	var idleTimeoutSeconds int
 	var listenPort uint16
@@ -118,8 +117,6 @@ func Root(
 		Long:  `CLI to scan your Local Area Network`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logger.New()
-
-			portList := strings.Split(ports, ",")
 
 			if ifaceName != userNet.Interface().Name {
 				uNet, err := network.NewNetworkFromInterfaceName(ifaceName)
@@ -147,7 +144,7 @@ func Root(
 				coreScanner = scanner.NewFullScanner(
 					userNet,
 					targets,
-					portList,
+					ports,
 					listenPort,
 					scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeoutSeconds)),
 				)
@@ -166,7 +163,7 @@ func Root(
 
 			coreScanner.SetTiming(timingDuration)
 
-			portLen := util.PortTotal(portList)
+			portLen := util.PortTotal(ports)
 
 			targetLen := util.TotalTargets(targets)
 
@@ -189,7 +186,7 @@ func Root(
 					coreScanner,
 					targets,
 					userNet.Cidr(),
-					portList,
+					ports,
 					userNet.Interface().Name,
 					listenPort,
 					timing,
@@ -209,7 +206,7 @@ func Root(
 	cmd.Flags().BoolVar(&printJson, "json", false, "output json instead of table text")
 	cmd.Flags().BoolVar(&arpOnly, "arp-only", false, "only perform arp scanning (skip syn scanning)")
 	cmd.Flags().BoolVar(&noProgress, "no-progress", false, "disable all output except for final results")
-	cmd.Flags().StringVarP(&ports, "ports", "p", "1-65535", "target ports")
+	cmd.Flags().StringSliceVarP(&ports, "ports", "p", []string{"1-65535"}, "target ports")
 	cmd.Flags().IntVar(&idleTimeoutSeconds, "idle-timeout", 5, "timeout when no expected packets are received for this duration")
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
 	cmd.Flags().StringVarP(&ifaceName, "interface", "i", userNet.Interface().Name, "set the interface for scanning")
