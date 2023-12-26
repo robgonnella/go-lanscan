@@ -30,6 +30,7 @@ func TestOptions(t *testing.T) {
 		scanner.NewArpScanner(
 			[]string{},
 			netInfo,
+			scanner.WithTiming(time.Millisecond),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(requestNotifier),
@@ -41,6 +42,7 @@ func TestOptions(t *testing.T) {
 			[]string{},
 			[]string{},
 			54321,
+			scanner.WithTiming(time.Millisecond),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(requestNotifier),
@@ -52,6 +54,7 @@ func TestOptions(t *testing.T) {
 			netInfo,
 			[]string{},
 			54321,
+			scanner.WithTiming(time.Millisecond),
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(requestNotifier),

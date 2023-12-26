@@ -18,7 +18,7 @@ func TestRootCommand(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	t.Run("initializes and runs full scanner", func(st *testing.T) {
+	t.Run("returns error if invalid timing duration is supplied", func(st *testing.T) {
 		mockNetwork := mock_network.NewMockNetwork(ctrl)
 
 		mockRunner := mock_core.NewMockRunner(ctrl)
@@ -40,6 +40,41 @@ func TestRootCommand(t *testing.T) {
 
 		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
 
+		cmd, err := cli.Root(mockRunner, mockNetwork, mockVendor)
+
+		assert.NoError(st, err)
+
+		cmd.SetArgs([]string{"--timing", "nope"})
+
+		err = cmd.Execute()
+
+		assert.Error(st, err)
+	})
+
+	t.Run("initializes and runs full scanner and includes vendor info", func(st *testing.T) {
+		mockNetwork := mock_network.NewMockNetwork(ctrl)
+
+		mockRunner := mock_core.NewMockRunner(ctrl)
+
+		mockVendor := mock_oui.NewMockVendorRepo(ctrl)
+
+		mockMAC, _ := net.ParseMAC("00:00:00:00:00:00")
+
+		mockCidr := "172.17.1.1/32"
+
+		_, mockIPNet, _ := net.ParseCIDR(mockCidr)
+
+		mockNetwork.EXPECT().Interface().AnyTimes().Return(&net.Interface{
+			Name:         "test-interface",
+			HardwareAddr: mockMAC,
+		})
+
+		mockNetwork.EXPECT().Cidr().AnyTimes().Return(mockCidr)
+
+		mockNetwork.EXPECT().IPNet().AnyTimes().Return(mockIPNet)
+
+		mockVendor.EXPECT().UpdateVendors().Times(1)
+
 		mockRunner.EXPECT().Initialize(
 			gomock.Any(),
 			1,
@@ -56,7 +91,7 @@ func TestRootCommand(t *testing.T) {
 
 		assert.NoError(st, err)
 
-		cmd.SetArgs([]string{})
+		cmd.SetArgs([]string{"--vendor"})
 
 		err = cmd.Execute()
 

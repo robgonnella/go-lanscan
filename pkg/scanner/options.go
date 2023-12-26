@@ -11,7 +11,10 @@ import (
 // How long to wait before sending next packet
 // the faster you send packets the more packets
 // will be missed when reading
-const defaultAccuracy = time.Microsecond * 100
+const defaultTiming = time.Microsecond * 100
+
+// If no packets are received for this period of time, exit with timeout
+const defaultIdleTimeout = time.Second * 5
 
 type ScannerOption = func(s Scanner)
 
@@ -36,5 +39,11 @@ func WithVendorInfo(repo oui.VendorRepo) ScannerOption {
 func WithPacketCapture(cap PacketCapture) ScannerOption {
 	return func(s Scanner) {
 		s.SetPacketCapture(cap)
+	}
+}
+
+func WithTiming(duration time.Duration) ScannerOption {
+	return func(s Scanner) {
+		s.SetTiming(duration)
 	}
 }

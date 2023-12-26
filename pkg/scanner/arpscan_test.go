@@ -115,6 +115,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
@@ -141,10 +142,6 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
@@ -153,6 +150,13 @@ func TestArpScanner(t *testing.T) {
 			if firstCall {
 				firstCall = false
 				return nil, gopacket.CaptureInfo{}, errors.New("mock ReadPacketData error")
+			}
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
 			}
 			return test_helper.NewArpReplyReadResult(
 				mockNonIncludedArpSrcIP,
@@ -171,6 +175,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{},
@@ -197,14 +202,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockNonIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -222,6 +230,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
@@ -247,14 +256,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockNonIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -272,6 +284,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
@@ -297,14 +310,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpRequestReadResult()
 		})
 
@@ -319,6 +335,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
@@ -344,14 +361,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockNonIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // scanning host hw address
@@ -369,6 +389,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
@@ -394,14 +415,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -420,6 +444,7 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		vendorRepo.EXPECT().UpdateVendors().Times(1)
 
@@ -448,14 +473,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -481,6 +509,7 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		vendorRepo := mock_oui.NewMockVendorRepo(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		vendorRepo.EXPECT().UpdateVendors().Times(1)
 
@@ -509,14 +538,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -558,6 +590,7 @@ func TestArpScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		requestNotifier := make(chan *scanner.Request)
 
@@ -591,14 +624,17 @@ func TestArpScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				arpScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					arpScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewArpReplyReadResult(
 				mockIncludedArpSrcIP,
 				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},

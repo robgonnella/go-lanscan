@@ -123,6 +123,7 @@ func TestSynScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
@@ -159,10 +160,6 @@ func TestSynScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				synScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
@@ -172,6 +169,13 @@ func TestSynScanner(t *testing.T) {
 			if firstCall {
 				firstCall = false
 				return nil, gopacket.CaptureInfo{}, errors.New("mock ReadPacketData error")
+			}
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					synScanner.Stop()
+					wg.Done()
+				}()
 			}
 			return test_helper.NewSynWithAckResponsePacketBytes(
 				net.ParseIP("172.17.1.1"),
@@ -339,6 +343,7 @@ func TestSynScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
@@ -375,14 +380,17 @@ func TestSynScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				synScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					synScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewSynWithAckResponsePacketBytes(
 				net.ParseIP("172.17.1.1"),
 				22,
@@ -401,6 +409,7 @@ func TestSynScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
@@ -437,14 +446,17 @@ func TestSynScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				synScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					synScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewSynWithAckResponsePacketBytes(
 				net.ParseIP("192.168.22.1"),
 				3000,
@@ -463,6 +475,7 @@ func TestSynScanner(t *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
+		packetSent := false
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
@@ -499,14 +512,17 @@ func TestSynScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				synScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					synScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewSynWithAckResponsePacketBytes(
 				net.ParseIP("172.17.1.1"),
 				3000,
@@ -526,6 +542,7 @@ func TestSynScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
 		requestNotifier := make(chan *scanner.Request)
+		packetSent := false
 		notified := false
 
 		wg := sync.WaitGroup{}
@@ -570,14 +587,17 @@ func TestSynScanner(t *testing.T) {
 		handle.EXPECT().Close().AnyTimes()
 
 		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
-			defer func() {
-				synScanner.Stop()
-				wg.Done()
-			}()
 			return nil
 		})
 
 		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if !packetSent {
+				packetSent = true
+				defer func() {
+					synScanner.Stop()
+					wg.Done()
+				}()
+			}
 			return test_helper.NewSynWithAckResponsePacketBytes(
 				net.ParseIP("172.17.1.1"),
 				3000,

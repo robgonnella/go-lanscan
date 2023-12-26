@@ -30,6 +30,7 @@ type ArpScanner struct {
 	requestNotifier  chan *Request
 	scanning         bool
 	lastPacketSentAt time.Time
+	timing           time.Duration
 	idleTimeout      time.Duration
 	vendorRepo       oui.VendorRepo
 	scanningMux      *sync.RWMutex
@@ -51,7 +52,8 @@ func NewArpScanner(
 		cap:              &defaultPacketCapture{},
 		networkInfo:      networkInfo,
 		resultChan:       make(chan *ScanResult),
-		idleTimeout:      time.Second * 5,
+		timing:           defaultTiming,
+		idleTimeout:      defaultIdleTimeout,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
 		scanningMux:      &sync.RWMutex{},
@@ -108,7 +110,7 @@ func (s *ArpScanner) Scan() error {
 
 	go s.readPackets()
 
-	limiter := time.NewTicker(defaultAccuracy)
+	limiter := time.NewTicker(s.timing)
 	defer limiter.Stop()
 
 	if len(s.targets) == 0 {
@@ -140,6 +142,10 @@ func (s *ArpScanner) Stop() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
+}
+
+func (s *ArpScanner) SetTiming(d time.Duration) {
+	s.timing = d
 }
 
 func (s *ArpScanner) SetRequestNotifications(c chan *Request) {

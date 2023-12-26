@@ -37,6 +37,7 @@ type SynScanner struct {
 	requestNotifier  chan *Request
 	scanning         bool
 	lastPacketSentAt time.Time
+	timing           time.Duration
 	idleTimeout      time.Duration
 	scanningMux      *sync.RWMutex
 	packetSentAtMux  *sync.RWMutex
@@ -62,7 +63,8 @@ func NewSynScanner(
 		ports:            ports,
 		listenPort:       listenPort,
 		resultChan:       make(chan *ScanResult),
-		idleTimeout:      time.Second * 5,
+		timing:           defaultTiming,
+		idleTimeout:      defaultIdleTimeout,
 		scanning:         false,
 		lastPacketSentAt: time.Time{},
 		scanningMux:      &sync.RWMutex{},
@@ -135,7 +137,7 @@ func (s *SynScanner) Scan() error {
 
 	go s.readPackets()
 
-	limiter := time.NewTicker(defaultAccuracy)
+	limiter := time.NewTicker(s.timing)
 	defer limiter.Stop()
 
 	for _, target := range s.targets {
@@ -168,6 +170,10 @@ func (s *SynScanner) Stop() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
+}
+
+func (s *SynScanner) SetTiming(d time.Duration) {
+	s.timing = d
 }
 
 func (s *SynScanner) SetRequestNotifications(c chan *Request) {
@@ -210,12 +216,14 @@ func (s *SynScanner) readPackets() {
 
 				if err != nil {
 					s.debug.Error().Err(err).Msg("syn: read packet error")
+					continue
 				}
 
 				err = parser.DecodeLayers(packetData, &decoded)
 
 				if err != nil {
 					s.debug.Error().Err(err).Msg("syn: decode packet error")
+					continue
 				}
 
 				synPacket := &SynPacket{}
