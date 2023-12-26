@@ -1,5 +1,5 @@
 # go-lanscan
-![Coverage](https://img.shields.io/badge/Coverage-91.2%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-91.8%25-brightgreen)
 
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.
@@ -84,12 +84,10 @@ First you must install the following dependencies
 
 You can provide the following options to all scanners
 
-- Provide callback for notifications when packet requests are sent to target
+- Provide channel for notifications when packet requests are sent to target
 
 ```go
-  callback := func(request *scanner.Request) {
-    fmt.Printf("syn packet sent to %s on port %s", request.IP, request.Port)
-  }
+  requests := make(chan *scanner.Request)
 
   synScanner := scanner.NewSynScanner(
     targets,
@@ -98,15 +96,15 @@ You can provide the following options to all scanners
     listenPort,
     synResults,
     synDone,
-    scanner.WithRequestNotifications(callback),
+    scanner.WithRequestNotifications(requests),
   )
 
   // or
-  option := scanner.WithRequestNotifications(callback)
-  option(synScanner)
+  option := scanner.WithRequestNotifications(requests)
+  option(requests)
 
   // or
-  synScanner.SetRequestNotifications(callback)
+  synScanner.SetRequestNotifications(requests)
 ```
 
 - Provide your own idle timeout. If no packets are received from our targets

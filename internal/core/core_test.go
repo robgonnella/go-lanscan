@@ -190,23 +190,23 @@ func TestCore(t *testing.T) {
 
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
 
-		var callback func(r *scanner.Request)
+		var requestNotifier chan *scanner.Request
 
 		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
-			func(cb func(r *scanner.Request)) {
-				callback = cb
+			func(c chan *scanner.Request) {
+				requestNotifier = c
 			},
 		)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
 
-			callback(&scanner.Request{
-				Type: scanner.ArpRequest,
-				IP:   "172.17.0.1",
-			})
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				requestNotifier <- &scanner.Request{
+					Type: scanner.ArpRequest,
+					IP:   "172.17.0.1",
+				}
+
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPResult,
 					Payload: &scanner.ArpScanResult{
@@ -224,8 +224,6 @@ func TestCore(t *testing.T) {
 
 			return nil
 		})
-
-		mockScanner.EXPECT().Stop()
 
 		runner.Initialize(
 			mockScanner,
@@ -259,23 +257,23 @@ func TestCore(t *testing.T) {
 
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
 
-		var callback func(r *scanner.Request)
+		var requestNotifier chan *scanner.Request
 
 		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
-			func(cb func(r *scanner.Request)) {
-				callback = cb
+			func(c chan *scanner.Request) {
+				requestNotifier = c
 			},
 		)
 
 		mockScanner.EXPECT().Scan().DoAndReturn(func() error {
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
 
-			callback(&scanner.Request{
-				Type: scanner.ArpRequest,
-				IP:   "172.17.0.1",
-			})
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				requestNotifier <- &scanner.Request{
+					Type: scanner.ArpRequest,
+					IP:   "172.17.0.1",
+				}
+
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPResult,
 					Payload: &scanner.ArpScanResult{
@@ -293,8 +291,6 @@ func TestCore(t *testing.T) {
 
 			return nil
 		})
-
-		mockScanner.EXPECT().Stop()
 
 		runner.Initialize(
 			mockScanner,
@@ -346,8 +342,6 @@ func TestCore(t *testing.T) {
 			return nil
 		})
 
-		mockScanner.EXPECT().Stop()
-
 		runner.Initialize(
 			mockScanner,
 			1,
@@ -379,11 +373,11 @@ func TestCore(t *testing.T) {
 
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
 
-		var callback func(r *scanner.Request)
+		var requestNotifier chan *scanner.Request
 
 		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
-			func(cb func(r *scanner.Request)) {
-				callback = cb
+			func(c chan *scanner.Request) {
+				requestNotifier = c
 			},
 		)
 
@@ -391,18 +385,12 @@ func TestCore(t *testing.T) {
 			ip := net.ParseIP("172.17.0.1")
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
 
-			callback(&scanner.Request{
-				Type: scanner.ArpRequest,
-				IP:   "172.17.0.1",
-			})
-
-			callback(&scanner.Request{
-				Type: scanner.SynRequest,
-				IP:   "172.17.0.1",
-				Port: 22,
-			})
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				requestNotifier <- &scanner.Request{
+					Type: scanner.ArpRequest,
+					IP:   "172.17.0.1",
+				}
+
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPResult,
 					Payload: &scanner.ArpScanResult{
@@ -418,6 +406,12 @@ func TestCore(t *testing.T) {
 				}
 			})
 			time.AfterFunc(time.Millisecond*300, func() {
+				requestNotifier <- &scanner.Request{
+					Type: scanner.SynRequest,
+					IP:   "172.17.0.1",
+					Port: 22,
+				}
+
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -440,8 +434,6 @@ func TestCore(t *testing.T) {
 
 			return nil
 		})
-
-		mockScanner.EXPECT().Stop()
 
 		runner.Initialize(
 			mockScanner,
@@ -475,11 +467,11 @@ func TestCore(t *testing.T) {
 
 		mockScanner.EXPECT().Results().Return(scanResults).AnyTimes()
 
-		var callback func(r *scanner.Request)
+		var requestNotifier chan *scanner.Request
 
 		mockScanner.EXPECT().SetRequestNotifications(gomock.Any()).DoAndReturn(
-			func(cb func(r *scanner.Request)) {
-				callback = cb
+			func(c chan *scanner.Request) {
+				requestNotifier = c
 			},
 		)
 
@@ -487,18 +479,12 @@ func TestCore(t *testing.T) {
 			ip := net.ParseIP("172.17.0.1")
 			mac, _ := net.ParseMAC("00:00:00:00:00:00")
 
-			callback(&scanner.Request{
-				Type: scanner.ArpRequest,
-				IP:   "172.17.0.1",
-			})
-
-			callback(&scanner.Request{
-				Type: scanner.SynRequest,
-				IP:   "172.17.0.1",
-				Port: 22,
-			})
-
 			time.AfterFunc(time.Millisecond*100, func() {
+				requestNotifier <- &scanner.Request{
+					Type: scanner.ArpRequest,
+					IP:   "172.17.0.1",
+				}
+
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.ARPResult,
 					Payload: &scanner.ArpScanResult{
@@ -514,6 +500,12 @@ func TestCore(t *testing.T) {
 				}
 			})
 			time.AfterFunc(time.Millisecond*300, func() {
+				requestNotifier <- &scanner.Request{
+					Type: scanner.SynRequest,
+					IP:   "172.17.0.1",
+					Port: 22,
+				}
+
 				scanResults <- &scanner.ScanResult{
 					Type: scanner.SYNResult,
 					Payload: &scanner.SynScanResult{
@@ -536,8 +528,6 @@ func TestCore(t *testing.T) {
 
 			return nil
 		})
-
-		mockScanner.EXPECT().Stop()
 
 		runner.Initialize(
 			mockScanner,
@@ -611,8 +601,6 @@ func TestCore(t *testing.T) {
 			return nil
 		})
 
-		mockScanner.EXPECT().Stop()
-
 		runner.Initialize(
 			mockScanner,
 			1,
@@ -645,8 +633,6 @@ func TestCore(t *testing.T) {
 
 			return nil
 		})
-
-		mockScanner.EXPECT().Stop()
 
 		runner.Initialize(
 			mockScanner,

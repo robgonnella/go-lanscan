@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 
 	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
@@ -26,7 +27,7 @@ type ArpScanner struct {
 	cap              PacketCapture
 	handle           PacketCaptureHandle
 	resultChan       chan *ScanResult
-	notificationCB   func(a *Request)
+	requestNotifier  chan *Request
 	scanning         bool
 	lastPacketSentAt time.Time
 	idleTimeout      time.Duration
@@ -93,7 +94,7 @@ func (s *ArpScanner) Scan() error {
 		s.networkInfo.Interface().Name,
 		65536,
 		true,
-		s.idleTimeout,
+		pcap.BlockForever,
 	)
 
 	if err != nil {
@@ -141,8 +142,8 @@ func (s *ArpScanner) Stop() {
 	}
 }
 
-func (s *ArpScanner) SetRequestNotifications(cb func(a *Request)) {
-	s.notificationCB = cb
+func (s *ArpScanner) SetRequestNotifications(c chan *Request) {
+	s.requestNotifier = c
 }
 
 func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
@@ -161,22 +162,55 @@ func (s *ArpScanner) SetPacketCapture(cap PacketCapture) {
 }
 
 func (s *ArpScanner) readPackets() {
-	packetSource := gopacket.NewPacketSource(s.handle, layers.LayerTypeEthernet)
-	packetSource.DecodeOptions.NoCopy = true
-	packetSource.DecodeOptions.Lazy = true
+	stopChan := make(chan struct{})
 
-	defer s.reset()
+	go func() {
+		for {
+			select {
+			case <-stopChan:
+				return
+			default:
+				var eth layers.Ethernet
+				var arp layers.ARP
+				var payload gopacket.Payload
+
+				parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp, &payload)
+				decoded := []gopacket.LayerType{}
+				packetData, _, err := s.handle.ReadPacketData()
+
+				if err != nil {
+					s.debug.Error().Err(err).Msg("arp: error reading packet")
+					continue
+				}
+
+				err = parser.DecodeLayers(packetData, &decoded)
+
+				if err != nil {
+					s.debug.Error().Err(err).Msg("arp: error decoding packet")
+					continue
+				}
+
+			OUTER:
+				for _, layerType := range decoded {
+					switch layerType {
+					case layers.LayerTypeARP:
+						go s.handleARPLayer(&arp)
+						break OUTER
+					}
+				}
+			}
+		}
+	}()
+
+	defer func() {
+		stopChan <- struct{}{}
+		s.reset()
+	}()
 
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
-		case packet := <-packetSource.Packets():
-			arpLayer := packet.Layer(layers.LayerTypeARP)
-
-			if arpLayer != nil {
-				go s.handleARPLayer(arpLayer.(*layers.ARP))
-			}
 		default:
 			s.packetSentAtMux.RLock()
 			packetSentAt := s.lastPacketSentAt
@@ -255,8 +289,10 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 		return err
 	}
 
-	if s.notificationCB != nil {
-		go s.notificationCB(&Request{Type: ArpRequest, IP: ip.String()})
+	if s.requestNotifier != nil {
+		go func() {
+			s.requestNotifier <- &Request{Type: ArpRequest, IP: ip.String()}
+		}()
 	}
 
 	return nil

@@ -25,13 +25,14 @@ func TestOptions(t *testing.T) {
 
 	t.Run("sets options", func(st *testing.T) {
 		netInfo := mock_network.NewMockNetwork(ctrl)
+		requestNotifier := make(chan *scanner.Request)
 
 		scanner.NewArpScanner(
 			[]string{},
 			netInfo,
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
-			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
+			scanner.WithRequestNotifications(requestNotifier),
 			scanner.WithVendorInfo(vendorRepo),
 		)
 
@@ -42,7 +43,7 @@ func TestOptions(t *testing.T) {
 			54321,
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
-			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
+			scanner.WithRequestNotifications(requestNotifier),
 			scanner.WithVendorInfo(vendorRepo),
 		)
 
@@ -53,7 +54,7 @@ func TestOptions(t *testing.T) {
 			54321,
 			scanner.WithIdleTimeout(time.Second*5),
 			scanner.WithPacketCapture(testPacketCapture),
-			scanner.WithRequestNotifications(func(r *scanner.Request) {}),
+			scanner.WithRequestNotifications(requestNotifier),
 			scanner.WithVendorInfo(vendorRepo),
 		)
 	})

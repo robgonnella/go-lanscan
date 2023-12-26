@@ -111,6 +111,62 @@ func TestArpScanner(t *testing.T) {
 		assert.ErrorIs(st, mockErr, err)
 	})
 
+	t.Run("prints debug message if reading packets returns error", func(st *testing.T) {
+		cap := mock_scanner.NewMockPacketCapture(ctrl)
+		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
+		mockNetInfo := mock_network.NewMockNetwork(ctrl)
+
+		arpScanner := scanner.NewArpScanner(
+			[]string{},
+			mockNetInfo,
+			scanner.WithPacketCapture(cap),
+		)
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+
+		mockNetInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
+		mockNetInfo.EXPECT().IPNet().Return(mockIPNet).AnyTimes()
+		mockNetInfo.EXPECT().UserIP().Return(mockUserIP)
+		mockNetInfo.EXPECT().Cidr().AnyTimes().Return(cidr)
+
+		cap.EXPECT().OpenLive(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).Return(handle, nil)
+
+		cap.EXPECT().SerializeLayers(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		handle.EXPECT().Close().AnyTimes()
+
+		handle.EXPECT().WritePacketData(gomock.Any()).DoAndReturn(func(data []byte) (err error) {
+			defer func() {
+				arpScanner.Stop()
+				wg.Done()
+			}()
+			return nil
+		})
+
+		firstCall := true
+		handle.EXPECT().ReadPacketData().AnyTimes().DoAndReturn(func() (data []byte, ci gopacket.CaptureInfo, err error) {
+			if firstCall {
+				firstCall = false
+				return nil, gopacket.CaptureInfo{}, errors.New("mock ReadPacketData error")
+			}
+			return test_helper.NewArpReplyReadResult(
+				mockNonIncludedArpSrcIP,
+				[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+			)
+		})
+
+		err := arpScanner.Scan()
+
+		wg.Wait()
+
+		assert.NoError(st, err)
+	})
+
 	t.Run("performs arp scan on default network info", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
@@ -498,20 +554,23 @@ func TestArpScanner(t *testing.T) {
 		assert.Panics(st, panicTestFunc)
 	})
 
-	t.Run("calls request notification callback", func(st *testing.T) {
+	t.Run("sends request notifications", func(st *testing.T) {
 		cap := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		callback := func(request *scanner.Request) {
-			assert.NotNil(st, request)
-		}
+		requestNotifier := make(chan *scanner.Request)
+
+		go func() {
+			r := <-requestNotifier
+			assert.NotNil(st, r)
+		}()
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			scanner.WithPacketCapture(cap),
-			scanner.WithRequestNotifications(callback),
+			scanner.WithRequestNotifications(requestNotifier),
 		)
 
 		wg := sync.WaitGroup{}
@@ -558,15 +617,18 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		callback := func(request *scanner.Request) {
-			assert.NotNil(st, request)
-		}
+		requestNotifier := make(chan *scanner.Request)
+
+		go func() {
+			r := <-requestNotifier
+			assert.NotNil(st, r)
+		}()
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			scanner.WithPacketCapture(cap),
-			scanner.WithRequestNotifications(callback),
+			scanner.WithRequestNotifications(requestNotifier),
 		)
 
 		mockNetInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)
@@ -605,15 +667,18 @@ func TestArpScanner(t *testing.T) {
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		mockNetInfo := mock_network.NewMockNetwork(ctrl)
 
-		callback := func(request *scanner.Request) {
-			assert.NotNil(st, request)
-		}
+		requestNotifier := make(chan *scanner.Request)
+
+		go func() {
+			r := <-requestNotifier
+			assert.NotNil(st, r)
+		}()
 
 		arpScanner := scanner.NewArpScanner(
 			[]string{"172.17.1.1"},
 			mockNetInfo,
 			scanner.WithPacketCapture(cap),
-			scanner.WithRequestNotifications(callback),
+			scanner.WithRequestNotifications(requestNotifier),
 		)
 
 		mockNetInfo.EXPECT().Interface().AnyTimes().Return(mockInterface)

@@ -11,13 +11,13 @@ import (
 // How long to wait before sending next packet
 // the faster you send packets the more packets
 // will be missed when reading
-const defaultAccuracy = time.Millisecond * 100
+const defaultAccuracy = time.Microsecond * 100
 
 type ScannerOption = func(s Scanner)
 
-func WithRequestNotifications(cb func(a *Request)) ScannerOption {
+func WithRequestNotifications(c chan *Request) ScannerOption {
 	return func(s Scanner) {
-		s.SetRequestNotifications(cb)
+		s.SetRequestNotifications(c)
 	}
 }
 

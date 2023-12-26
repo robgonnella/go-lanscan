@@ -59,25 +59,27 @@ func (r *Results) MarshalJSON() ([]byte, error) {
 }
 
 type Core struct {
-	arpOnly    bool
-	printJson  bool
-	noProgress bool
-	outFile    string
-	portLen    int
-	results    *Results
-	pw         progress.Writer
-	arpTracker *progress.Tracker
-	synTracker *progress.Tracker
-	errorChan  chan error
-	scanner    scanner.Scanner
-	mux        *sync.RWMutex
-	log        logger.Logger
+	arpOnly         bool
+	printJson       bool
+	noProgress      bool
+	outFile         string
+	portLen         int
+	results         *Results
+	pw              progress.Writer
+	arpTracker      *progress.Tracker
+	synTracker      *progress.Tracker
+	requestNotifier chan *scanner.Request
+	errorChan       chan error
+	scanner         scanner.Scanner
+	mux             *sync.RWMutex
+	log             logger.Logger
 }
 
 func New() *Core {
 	return &Core{
-		mux: &sync.RWMutex{},
-		log: logger.New(),
+		requestNotifier: make(chan *scanner.Request),
+		mux:             &sync.RWMutex{},
+		log:             logger.New(),
 	}
 }
 
@@ -102,7 +104,7 @@ func (c *Core) Initialize(
 	if noProgress {
 		logger.SetGlobalLevel(zerolog.Disabled)
 	} else {
-		coreScanner.SetRequestNotifications(c.requestCallback)
+		coreScanner.SetRequestNotifications(c.requestNotifier)
 	}
 
 	c.scanner = coreScanner
@@ -122,10 +124,10 @@ func (c *Core) Run() error {
 	start := time.Now()
 
 	if !c.noProgress {
+		c.pw.AppendTracker(c.arpTracker)
+		go c.monitorRequestNotifications()
 		go c.pw.Render()
 	}
-
-	c.pw.AppendTracker(c.arpTracker)
 
 	// run in go routine so we can process in results in parallel
 	go func() {
@@ -156,8 +158,6 @@ OUTER:
 			}
 		}
 	}
-
-	c.scanner.Stop()
 
 	c.log.Info().Str("duration", time.Since(start).String()).Msg("go-lanscan complete")
 
@@ -249,44 +249,6 @@ func (c *Core) processArpDone() {
 		}()
 
 		return
-	}
-}
-
-func (c *Core) requestCallback(r *scanner.Request) {
-	switch r.Type {
-	case scanner.ArpRequest:
-		c.arpTracker.Increment(1)
-
-		message := fmt.Sprintf("arp - scanning %s", r.IP)
-
-		if c.arpTracker.IsDone() {
-			message = "arp - scan complete"
-			// delay to print line after message is updated
-			time.AfterFunc(time.Millisecond*100, func() {
-				c.log.Info().Msg("compiling arp results...")
-			})
-		}
-
-		c.arpTracker.Message = message
-	case scanner.SynRequest:
-		c.synTracker.Increment(1)
-
-		message := fmt.Sprintf(
-			"syn - scanning port %d on %s",
-			r.Port,
-			r.IP,
-		)
-
-		if c.synTracker.IsDone() {
-			message = "syn - scan complete"
-			// delay to print line after message is updated
-			time.AfterFunc(time.Millisecond*100, func() {
-				c.log.Info().Msg("compiling syn results...")
-			})
-		}
-
-		c.synTracker.Message = message
-
 	}
 }
 
@@ -383,6 +345,45 @@ func (c *Core) printSynResults() {
 	if c.outFile != "" {
 		if err := os.WriteFile(c.outFile, []byte(output), 0644); err != nil {
 			c.log.Error().Err(err).Msg("failed to write output report")
+		}
+	}
+}
+
+func (c *Core) monitorRequestNotifications() {
+	for r := range c.requestNotifier {
+		switch r.Type {
+		case scanner.ArpRequest:
+			c.arpTracker.Increment(1)
+
+			message := fmt.Sprintf("arp - scanning %s", r.IP)
+
+			if c.arpTracker.IsDone() {
+				message = "arp - scan complete"
+				// delay to print line after message is updated
+				time.AfterFunc(time.Millisecond*100, func() {
+					c.log.Info().Msg("compiling arp results...")
+				})
+			}
+
+			c.arpTracker.Message = message
+		case scanner.SynRequest:
+			c.synTracker.Increment(1)
+
+			message := fmt.Sprintf(
+				"syn - scanning port %d on %s",
+				r.Port,
+				r.IP,
+			)
+
+			if c.synTracker.IsDone() {
+				message = "syn - scan complete"
+				// delay to print line after message is updated
+				time.AfterFunc(time.Millisecond*100, func() {
+					c.log.Info().Msg("compiling syn results...")
+				})
+			}
+
+			c.synTracker.Message = message
 		}
 	}
 }
