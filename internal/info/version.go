@@ -3,4 +3,4 @@
 package info
 
 // VERSION the version of this library
-var VERSION = "v1.14.1"
+var VERSION = "v1.14.2"
