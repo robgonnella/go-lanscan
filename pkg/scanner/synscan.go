@@ -260,7 +260,9 @@ func (s *SynScanner) readPackets() {
 	}()
 
 	defer func() {
-		stopChan <- struct{}{}
+		go func() {
+			stopChan <- struct{}{}
+		}()
 		s.reset()
 	}()
 

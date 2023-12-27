@@ -222,7 +222,9 @@ func (s *ArpScanner) readPackets() {
 	}()
 
 	defer func() {
-		stopChan <- struct{}{}
+		go func() {
+			stopChan <- struct{}{}
+		}()
 		s.reset()
 	}()
 
