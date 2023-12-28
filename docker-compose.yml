@@ -20,11 +20,12 @@ services:
       go-lanscan_default:
 
   go-lanscan:
-    build:
-      args:
-        - BUILD_TAGS=debug
-      context: .
-      dockerfile: Dockerfile
+    # build:
+    #   args:
+    #     - BUILD_TAGS=debug
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: rgonnella/go-lanscan:latest
     command: --ports 2323,3232 --json
     depends_on:
       - test-server-1

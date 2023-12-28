@@ -29,6 +29,29 @@ Some pre-built binaries are provided in the releases section of github:
 https://github.com/robgonnella/go-lanscan/releases. These binaries still have
 a prerequisite on libpcap being installed first.
 
+# Docker
+
+A docker image is provided with go-lanscan prebuilt.
+https://hub.docker.com/r/rgonnella/go-lanscan
+
+See [docker-compose.yml](./docker-compose.yml) for an example setup.
+
+**Linux**
+
+```bash
+docker run --rm --network host -v $(pwd)/reports:/reports rgonnella/go-lanscan:latest
+```
+
+**MacOS**
+
+On MacOS, host network does not work so you will only be able to scan whatever
+docker network the container is in. See
+[docker-compose.yml](./docker-compose.yml) for an example.
+
+```bash
+docker run --rm -v $(pwd)/reports:/reports rgonnella/go-lanscan:latest
+```
+
 ### Usage
 
 ```bash
