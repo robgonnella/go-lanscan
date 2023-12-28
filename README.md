@@ -29,7 +29,7 @@ Some pre-built binaries are provided in the releases section of github:
 https://github.com/robgonnella/go-lanscan/releases. These binaries still have
 a prerequisite on libpcap being installed first.
 
-# Docker
+### Docker
 
 A docker image is provided with go-lanscan prebuilt.
 https://hub.docker.com/r/rgonnella/go-lanscan
