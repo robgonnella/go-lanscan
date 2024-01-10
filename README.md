@@ -1,5 +1,5 @@
 # go-lanscan
-![Coverage](https://img.shields.io/badge/Coverage-92.5%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-92.2%25-brightgreen)
 
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.

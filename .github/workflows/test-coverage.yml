@@ -1,4 +1,4 @@
-name: Test
+name: Test and Update Coverage
 
 on:
   pull_request:
@@ -6,9 +6,8 @@ on:
       - main
 
 jobs:
-  test:
+  test_coverage:
     runs-on: ubuntu-latest
-    name: Test and update coverage badge
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,12 +23,6 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt update && sudo apt install -y make libpcap-dev
-
-      - name: Lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.55.2
-          skip-pkg-cache: true
 
       - name: Run Test
         run: |

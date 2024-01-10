@@ -99,6 +99,7 @@ test:
 		-v \
 		-coverprofile $(coverage_profile) \
 		-covermode=atomic \
+		-race \
 		./...
 
 .PHONY: print-coverage
