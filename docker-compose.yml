@@ -2,20 +2,14 @@ version: "3"
 
 services:
   test-server-1:
-    build:
-      context: test-server
-      dockerfile: Dockerfile
-    environment:
-      PORT: '3232'
+    image: hashicorp/http-echo:latest
+    command: -listen :3232
     networks:
       go-lanscan_default:
 
   test-server-2:
-    build:
-      context: test-server
-      dockerfile: Dockerfile
-    environment:
-      PORT: '2323'
+    image: hashicorp/http-echo:latest
+    command: -listen :2323
     networks:
       go-lanscan_default:
 
