@@ -4,7 +4,6 @@ package scanner
 
 import (
 	"bytes"
-	"context"
 	"net"
 	"sync"
 	"time"
@@ -21,8 +20,7 @@ import (
 
 // ArpScanner implements the Scanner interface for ARP scanning
 type ArpScanner struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
+	cancel           chan struct{}
 	targets          []string
 	networkInfo      network.Network
 	cap              PacketCapture
@@ -45,11 +43,7 @@ func NewArpScanner(
 	networkInfo network.Network,
 	options ...Option,
 ) *ArpScanner {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	scanner := &ArpScanner{
-		ctx:              ctx,
-		cancel:           cancel,
 		targets:          targets,
 		cap:              &defaultPacketCapture{},
 		networkInfo:      networkInfo,
@@ -112,6 +106,7 @@ func (s *ArpScanner) Scan() error {
 
 	s.scanningMux.Unlock()
 	s.handle = handle
+	s.cancel = make(chan struct{})
 
 	go s.readPackets()
 
@@ -143,7 +138,9 @@ func (s *ArpScanner) Scan() error {
 
 // Stop stops the scanner
 func (s *ArpScanner) Stop() {
-	s.cancel()
+	if s.cancel != nil {
+		close(s.cancel)
+	}
 
 	if s.handle != nil {
 		s.handle.Close()
@@ -181,12 +178,12 @@ func (s *ArpScanner) SetPacketCapture(cap PacketCapture) {
 }
 
 func (s *ArpScanner) readPackets() {
-	stopChan := make(chan struct{})
+	done := make(chan struct{})
 
 	go func() {
 		for {
 			select {
-			case <-stopChan:
+			case <-done:
 				return
 			default:
 				var eth layers.Ethernet
@@ -222,15 +219,13 @@ func (s *ArpScanner) readPackets() {
 	}()
 
 	defer func() {
-		go func() {
-			stopChan <- struct{}{}
-		}()
+		go close(done)
 		s.reset()
 	}()
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.cancel:
 			return
 		default:
 			s.packetSentAtMux.RLock()
@@ -350,10 +345,4 @@ func (s *ArpScanner) reset() {
 	s.packetSentAtMux.Lock()
 	s.lastPacketSentAt = time.Time{}
 	s.packetSentAtMux.Unlock()
-
-	if s.ctx.Err() != nil {
-		ctx, cancel := context.WithCancel(context.Background())
-		s.ctx = ctx
-		s.cancel = cancel
-	}
 }

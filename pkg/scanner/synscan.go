@@ -3,7 +3,6 @@
 package scanner
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -27,8 +26,7 @@ type SynPacket struct {
 
 // SynScanner implements the Scanner interface for SYN scanning
 type SynScanner struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
+	cancel           chan struct{}
 	networkInfo      network.Network
 	targets          []*ArpScanResult
 	ports            []string
@@ -55,11 +53,7 @@ func NewSynScanner(
 	listenPort uint16,
 	options ...Option,
 ) *SynScanner {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	scanner := &SynScanner{
-		ctx:              ctx,
-		cancel:           cancel,
 		targets:          targets,
 		networkInfo:      networkInfo,
 		cap:              &defaultPacketCapture{},
@@ -140,6 +134,7 @@ func (s *SynScanner) Scan() error {
 	s.scanningMux.Unlock()
 
 	s.handle = handle
+	s.cancel = make(chan struct{})
 
 	go s.readPackets()
 
@@ -172,7 +167,9 @@ func (s *SynScanner) Scan() error {
 
 // Stop stops the scanner
 func (s *SynScanner) Stop() {
-	s.cancel()
+	if s.cancel != nil {
+		close(s.cancel)
+	}
 
 	if s.handle != nil {
 		s.handle.Close()
@@ -212,12 +209,12 @@ func (s *SynScanner) SetTargets(targets []*ArpScanResult) {
 }
 
 func (s *SynScanner) readPackets() {
-	stopChan := make(chan struct{})
+	done := make(chan struct{})
 
 	go func() {
 		for {
 			select {
-			case <-stopChan:
+			case <-done:
 				return
 			default:
 				var eth layers.Ethernet
@@ -260,15 +257,13 @@ func (s *SynScanner) readPackets() {
 	}()
 
 	defer func() {
-		go func() {
-			stopChan <- struct{}{}
-		}()
+		go close(done)
 		s.reset()
 	}()
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.cancel:
 			return
 		default:
 			s.packetSentAtMux.RLock()
@@ -409,10 +404,4 @@ func (s *SynScanner) reset() {
 	s.packetSentAtMux.Lock()
 	s.lastPacketSentAt = time.Time{}
 	s.packetSentAtMux.Unlock()
-
-	if s.ctx.Err() != nil {
-		ctx, cancel := context.WithCancel(context.Background())
-		s.ctx = ctx
-		s.cancel = cancel
-	}
 }

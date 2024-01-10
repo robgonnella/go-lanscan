@@ -4,7 +4,6 @@ package scanner
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"slices"
 	"sync"
@@ -18,8 +17,7 @@ import (
 
 // FullScanner implements Scanner interface to perform both ARP and SYN scanning
 type FullScanner struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
+	cancel      chan struct{}
 	targets     []string
 	ports       []string
 	listenPort  uint16
@@ -43,8 +41,6 @@ func NewFullScanner(
 	listenPort uint16,
 	options ...Option,
 ) *FullScanner {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	arpScanner := NewArpScanner(
 		targets,
 		netInfo,
@@ -58,8 +54,6 @@ func NewFullScanner(
 	)
 
 	scanner := &FullScanner{
-		ctx:         ctx,
-		cancel:      cancel,
 		netInfo:     netInfo,
 		targets:     targets,
 		listenPort:  listenPort,
@@ -101,6 +95,8 @@ func (s *FullScanner) Scan() error {
 	s.scanning = true
 	s.scanningMux.Unlock()
 
+	s.cancel = make(chan struct{})
+
 	defer s.reset()
 
 	go func() {
@@ -111,7 +107,7 @@ func (s *FullScanner) Scan() error {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.cancel:
 			return nil
 		case r := <-s.arpScanner.Results():
 			switch r.Type {
@@ -142,7 +138,9 @@ func (s *FullScanner) Scan() error {
 
 // Stop stops the scanner
 func (s *FullScanner) Stop() {
-	s.cancel()
+	if s.cancel != nil {
+		close(s.cancel)
+	}
 
 	if s.arpScanner != nil {
 		s.arpScanner.Stop()
@@ -238,10 +236,4 @@ func (s *FullScanner) reset() {
 	s.scanningMux.Lock()
 	s.scanning = false
 	s.scanningMux.Unlock()
-
-	if s.ctx.Err() != nil {
-		ctx, cancel := context.WithCancel(context.Background())
-		s.ctx = ctx
-		s.cancel = cancel
-	}
 }

@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jedib0t/go-pretty/progress"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/robgonnella/go-lanscan/internal/logger"
 	"github.com/robgonnella/go-lanscan/internal/util"
 	"github.com/robgonnella/go-lanscan/pkg/scanner"
 	"github.com/rs/zerolog"
+	"github.com/schollz/progressbar/v3"
 )
 
 // DeviceResult represents a discovered network device
@@ -70,9 +70,8 @@ type Core struct {
 	outFile         string
 	portLen         int
 	results         *Results
-	pw              progress.Writer
-	arpTracker      *progress.Tracker
-	synTracker      *progress.Tracker
+	arpProgress     *progressbar.ProgressBar
+	synProgress     *progressbar.ProgressBar
 	requestNotifier chan *scanner.Request
 	errorChan       chan error
 	scanner         scanner.Scanner
@@ -99,14 +98,9 @@ func (c *Core) Initialize(
 	printJSON bool,
 	outFile string,
 ) {
-	pw := progressWriter()
-
 	results := &Results{
 		Devices: []*DeviceResult{},
 	}
-
-	arpTracker := &progress.Tracker{Message: "starting arp scan"}
-	arpTracker.Total = int64(targetLen)
 
 	if noProgress {
 		logger.SetGlobalLevel(zerolog.Disabled)
@@ -118,9 +112,8 @@ func (c *Core) Initialize(
 	c.results = results
 	c.errorChan = make(chan error)
 	c.portLen = portLen
-	c.pw = pw
-	c.arpTracker = arpTracker
-	c.synTracker = &progress.Tracker{Message: "starting syn scan"}
+	c.arpProgress = newProgressBar(targetLen, "performing arp scan")
+	c.synProgress = newProgressBar(1, "performing syn scan")
 	c.noProgress = noProgress
 	c.arpOnly = arpOnly
 	c.printJSON = printJSON
@@ -132,9 +125,7 @@ func (c *Core) Run() error {
 	start := time.Now()
 
 	if !c.noProgress {
-		c.pw.AppendTracker(c.arpTracker)
 		go c.monitorRequestNotifications()
-		go c.pw.Render()
 	}
 
 	// run in go routine so we can process in results in parallel
@@ -243,10 +234,8 @@ func (c *Core) processArpDone() {
 	c.printArpResults()
 
 	if !c.noProgress && !c.arpOnly && len(c.results.Devices) > 0 {
-		c.synTracker.Total = int64(
-			len(c.results.Devices) * c.portLen,
-		)
-		c.pw.AppendTracker(c.synTracker)
+		size := len(c.results.Devices) * c.portLen
+		c.synProgress.ChangeMax(size)
 	}
 
 	if !c.arpOnly && len(c.results.Devices) == 0 {
@@ -361,21 +350,21 @@ func (c *Core) monitorRequestNotifications() {
 	for r := range c.requestNotifier {
 		switch r.Type {
 		case scanner.ArpRequest:
-			c.arpTracker.Increment(1)
+			// nolint:errcheck
+			c.arpProgress.Add(1)
 
 			message := fmt.Sprintf("arp - scanning %s", r.IP)
 
-			if c.arpTracker.IsDone() {
-				message = "arp - scan complete"
-				// delay to print line after message is updated
-				time.AfterFunc(time.Millisecond*100, func() {
-					c.log.Info().Msg("compiling arp results...")
-				})
-			}
+			c.arpProgress.Describe("\033[36m" + message + "\033[0m")
 
-			c.arpTracker.Message = message
+			if c.arpProgress.IsFinished() {
+				// nolint:errcheck
+				c.arpProgress.Clear()
+				c.log.Info().Msg("compiling arp results...")
+			}
 		case scanner.SynRequest:
-			c.synTracker.Increment(1)
+			// nolint:errcheck
+			c.synProgress.Add(1)
 
 			message := fmt.Sprintf(
 				"syn - scanning port %d on %s",
@@ -383,33 +372,29 @@ func (c *Core) monitorRequestNotifications() {
 				r.IP,
 			)
 
-			if c.synTracker.IsDone() {
-				message = "syn - scan complete"
-				// delay to print line after message is updated
-				time.AfterFunc(time.Millisecond*100, func() {
-					c.log.Info().Msg("compiling syn results...")
-				})
-			}
+			c.synProgress.Describe("\033[36m" + message + "\033[0m")
 
-			c.synTracker.Message = message
+			if c.synProgress.IsFinished() {
+				// nolint:errcheck
+				c.synProgress.Clear()
+				c.log.Info().Msg("compiling syn results...")
+			}
 		}
 	}
 }
 
-// helpers
-func progressWriter() progress.Writer {
-	pw := progress.NewWriter()
-	pw.SetOutputWriter(os.Stdout)
-	pw.SetAutoStop(false)
-	pw.SetTrackerLength(25)
-	pw.SetMessageWidth(47)
-	pw.SetNumTrackersExpected(1)
-	pw.SetSortBy(progress.SortByPercentDsc)
-	pw.SetStyle(progress.StyleDefault)
-	pw.SetTrackerPosition(progress.PositionRight)
-	pw.SetUpdateFrequency(time.Millisecond * 100)
-	pw.Style().Colors = progress.StyleColorsExample
-	pw.Style().Options.PercentFormat = "%4.3f%%"
-
-	return pw
+func newProgressBar(size int, msg string) *progressbar.ProgressBar {
+	return progressbar.NewOptions(size,
+		progressbar.OptionUseANSICodes(true),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(25),
+		progressbar.OptionSetDescription("\033[36m"+msg+"\033[0m"),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}))
 }
