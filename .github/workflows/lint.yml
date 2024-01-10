@@ -19,6 +19,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y make libpcap-dev
+
       - name: Lint
         uses: golangci/golangci-lint-action@v3
         with:
