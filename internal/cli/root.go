@@ -106,7 +106,7 @@ func Root(
 	vendorRepo oui.VendorRepo,
 ) (*cobra.Command, error) {
 	var printJSON bool
-	var noProgress bool
+	var progressDisabled bool
 	var ports []string
 	var timing string
 	var idleTimeoutSeconds int
@@ -181,13 +181,13 @@ func Root(
 				coreScanner,
 				targetLen,
 				portLen,
-				noProgress,
+				progressDisabled,
 				arpOnly,
 				printJSON,
 				outFile,
 			)
 
-			if !noProgress {
+			if !progressDisabled {
 				printConfiguration(
 					coreScanner,
 					targets,
@@ -199,7 +199,7 @@ func Root(
 					vendorInfo,
 					printJSON,
 					arpOnly,
-					!noProgress,
+					!progressDisabled,
 					outFile,
 				)
 			}
@@ -211,7 +211,7 @@ func Root(
 	cmd.Flags().StringVar(&timing, "timing", "100µs", "set time between packet sends - the faster you send the less accurate the result will be")
 	cmd.Flags().BoolVar(&printJSON, "json", false, "output json instead of table text")
 	cmd.Flags().BoolVar(&arpOnly, "arp-only", false, "only perform arp scanning (skip syn scanning)")
-	cmd.Flags().BoolVar(&noProgress, "no-progress", false, "disable all output except for final results")
+	cmd.Flags().BoolVar(&progressDisabled, "no-progress", false, "disable all output except for final results")
 	cmd.Flags().StringSliceVarP(&ports, "ports", "p", []string{"1-65535"}, "target ports")
 	cmd.Flags().IntVar(&idleTimeoutSeconds, "idle-timeout", 5, "timeout when no expected packets are received for this duration")
 	cmd.Flags().Uint16Var(&listenPort, "listen-port", 54321, "set the port on which the scanner will listen for packets")
