@@ -66,7 +66,7 @@ func (r *Results) MarshalJSON() ([]byte, error) {
 type Core struct {
 	arpOnly         bool
 	printJSON       bool
-	noProgress      bool
+	progressEnabled bool
 	outFile         string
 	portLen         int
 	results         *Results
@@ -114,7 +114,7 @@ func (c *Core) Initialize(
 	c.portLen = portLen
 	c.arpProgress = newProgressBar(targetLen, "performing arp scan")
 	c.synProgress = newProgressBar(1, "performing syn scan")
-	c.noProgress = noProgress
+	c.progressEnabled = !noProgress
 	c.arpOnly = arpOnly
 	c.printJSON = printJSON
 	c.outFile = outFile
@@ -124,7 +124,7 @@ func (c *Core) Initialize(
 func (c *Core) Run() error {
 	start := time.Now()
 
-	if !c.noProgress {
+	if c.progressEnabled {
 		go c.monitorRequestNotifications()
 	}
 
@@ -233,7 +233,7 @@ func (c *Core) processArpDone() {
 
 	c.printArpResults()
 
-	if !c.noProgress && !c.arpOnly && len(c.results.Devices) > 0 {
+	if c.progressEnabled && !c.arpOnly && len(c.results.Devices) > 0 {
 		size := len(c.results.Devices) * c.portLen
 		c.synProgress.ChangeMax(size)
 	}
@@ -262,7 +262,7 @@ func (c *Core) printArpResults() {
 			}()
 		}
 
-		if !c.noProgress {
+		if c.progressEnabled {
 			fmt.Println(string(data))
 		}
 
