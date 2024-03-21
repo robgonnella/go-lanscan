@@ -21,10 +21,11 @@ func TestDeviceResult(t *testing.T) {
 	t.Run("is serializable", func(st *testing.T) {
 		mac, _ := net.ParseMAC("00:00:00:00:00:00")
 		result := &core.DeviceResult{
-			IP:     net.ParseIP("127.0.0.1"),
-			MAC:    mac,
-			Vendor: "unknown",
-			Status: scanner.StatusOnline,
+			IP:       net.ParseIP("127.0.0.1"),
+			MAC:      mac,
+			Hostname: "unknown",
+			Vendor:   "unknown",
+			Status:   scanner.StatusOnline,
 			OpenPorts: []scanner.Port{
 				{
 					ID:      22,

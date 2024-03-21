@@ -38,6 +38,7 @@ func main() {
 		userNet,
 		scanner.WithIdleTimeout(time.Second*time.Duration(idleTimeout)),
 		scanner.WithVendorInfo(vendorRepo),
+		scanner.WithHostnames(true),
 	)
 
 	go func() {

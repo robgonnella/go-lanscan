@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=../../mock/oui/oui.go -package=mock_oui . VendorRepo
 //
+
 // Package mock_oui is a generated GoMock package.
 package mock_oui
 

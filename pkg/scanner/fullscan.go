@@ -54,6 +54,7 @@ func NewFullScanner(
 	)
 
 	scanner := &FullScanner{
+		cancel:      make(chan struct{}),
 		netInfo:     netInfo,
 		targets:     targets,
 		listenPort:  listenPort,
@@ -94,8 +95,6 @@ func (s *FullScanner) Scan() error {
 	s.scanningMux.Lock()
 	s.scanning = true
 	s.scanningMux.Unlock()
-
-	s.cancel = make(chan struct{})
 
 	defer s.reset()
 
@@ -138,9 +137,9 @@ func (s *FullScanner) Scan() error {
 
 // Stop stops the scanner
 func (s *FullScanner) Stop() {
-	if s.cancel != nil {
-		close(s.cancel)
-	}
+	go func() {
+		s.cancel <- struct{}{}
+	}()
 
 	if s.arpScanner != nil {
 		s.arpScanner.Stop()
@@ -169,6 +168,12 @@ func (s *FullScanner) SetRequestNotifications(c chan *Request) {
 func (s *FullScanner) SetIdleTimeout(d time.Duration) {
 	s.arpScanner.SetIdleTimeout(d)
 	s.synScanner.SetIdleTimeout(d)
+}
+
+// IncludeHostNames sets whether reverse dns look up is performed to find hostname
+func (s *FullScanner) IncludeHostNames(v bool) {
+	s.arpScanner.IncludeHostNames(v)
+	s.synScanner.IncludeHostNames(v)
 }
 
 // IncludeVendorInfo sets whether or not to include vendor info when scanning

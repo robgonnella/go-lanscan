@@ -24,6 +24,7 @@ import (
 type DeviceResult struct {
 	IP        net.IP           `json:"ip"`
 	MAC       net.HardwareAddr `json:"mac"`
+	Hostname  string           `json:"hostname"`
 	Vendor    string           `json:"vendor"`
 	Status    scanner.Status   `json:"status"`
 	OpenPorts []scanner.Port   `json:"openPorts"`
@@ -34,12 +35,14 @@ func (r *DeviceResult) Serializable() interface{} {
 	return struct {
 		IP        string         `json:"ip"`
 		MAC       string         `json:"mac"`
+		Hostname  string         `json:"hostname"`
 		Vendor    string         `json:"vendor"`
 		Status    string         `json:"status"`
 		OpenPorts []scanner.Port `json:"openPorts"`
 	}{
 		IP:        r.IP.String(),
 		MAC:       r.MAC.String(),
+		Hostname:  r.Hostname,
 		Vendor:    r.Vendor,
 		Status:    string(r.Status),
 		OpenPorts: r.OpenPorts,
@@ -217,6 +220,7 @@ func (c *Core) processArpResult(result *scanner.ArpScanResult) {
 			IP:        result.IP,
 			MAC:       result.MAC,
 			Status:    scanner.StatusOnline,
+			Hostname:  result.Hostname,
 			Vendor:    result.Vendor,
 			OpenPorts: []scanner.Port{},
 		})
@@ -277,10 +281,10 @@ func (c *Core) printArpResults() {
 
 	var arpTable = table.NewWriter()
 	arpTable.SetOutputMirror(os.Stdout)
-	arpTable.AppendHeader(table.Row{"IP", "MAC", "VENDOR"})
+	arpTable.AppendHeader(table.Row{"IP", "MAC", "HOSTNAME", "VENDOR"})
 
 	for _, t := range c.results.Devices {
-		arpTable.AppendRow(table.Row{t.IP.String(), t.MAC.String(), t.Vendor})
+		arpTable.AppendRow(table.Row{t.IP.String(), t.MAC.String(), t.Hostname, t.Vendor})
 	}
 
 	output := arpTable.Render()
@@ -319,7 +323,7 @@ func (c *Core) printSynResults() {
 
 	var synTable = table.NewWriter()
 	synTable.SetOutputMirror(os.Stdout)
-	synTable.AppendHeader(table.Row{"IP", "MAC", "VENDOR", "STATUS", "OPEN PORTS"})
+	synTable.AppendHeader(table.Row{"IP", "MAC", "HOSTNAME", "VENDOR", "STATUS", "OPEN PORTS"})
 
 	for _, r := range c.results.Devices {
 		openPorts := []string{}
@@ -331,6 +335,7 @@ func (c *Core) printSynResults() {
 		synTable.AppendRow(table.Row{
 			r.IP.String(),
 			r.MAC.String(),
+			r.Hostname,
 			r.Vendor,
 			r.Status,
 			openPorts,

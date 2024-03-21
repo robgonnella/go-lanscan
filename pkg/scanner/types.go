@@ -38,6 +38,7 @@ type Scanner interface {
 	SetRequestNotifications(c chan *Request)
 	SetIdleTimeout(d time.Duration)
 	IncludeVendorInfo(repo oui.VendorRepo)
+	IncludeHostNames(v bool)
 	SetPacketCapture(cap PacketCapture)
 }
 
@@ -97,21 +98,24 @@ type SynScanResult struct {
 
 // ArpScanResult represents a single network device result from arp scan
 type ArpScanResult struct {
-	IP     net.IP
-	MAC    net.HardwareAddr
-	Vendor string
+	IP       net.IP
+	MAC      net.HardwareAddr
+	Hostname string
+	Vendor   string
 }
 
 // Serializable returns a serializable version of ArpScanResult
 func (r *ArpScanResult) Serializable() interface{} {
 	return struct {
-		IP     string `json:"ip"`
-		MAC    string `json:"mac"`
-		Vendor string `json:"vendor"`
+		IP       string `json:"ip"`
+		MAC      string `json:"mac"`
+		Hostname string `json:"hostname"`
+		Vendor   string `json:"vendor"`
 	}{
-		IP:     r.IP.String(),
-		MAC:    r.MAC.String(),
-		Vendor: r.Vendor,
+		IP:       r.IP.String(),
+		MAC:      r.MAC.String(),
+		Hostname: r.Hostname,
+		Vendor:   r.Vendor,
 	}
 }
 

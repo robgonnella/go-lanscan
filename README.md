@@ -1,5 +1,5 @@
 # go-lanscan
-![Coverage](https://img.shields.io/badge/Coverage-92.2%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-91.8%25-brightgreen)
 
 A network cli and golang package that allows you to perform arp and syn
 scanning on a local area network.
@@ -69,6 +69,9 @@ sudo go-lanscan --targets 192.22.22.1,192.168.1.1-192.168.1.50,192.56.42.1/24
 
 # include vendor look-ups on mac addresses (scan will be a little slower)
 sudo go-lanscan --vendor
+
+# include reverse dns lookup for hostnames
+sudo go-lanscan --hostnames
 
 # update static database used for vendor lookups
 # static file is located at ~/.config/go-lanscan/oui.txt
@@ -212,6 +215,25 @@ queries against this file. The file is stored at `~/.config/go-lanscan/oui.txt`
 
   // or
   option := scanner.WithVendorInfo(vendorRepo)
+  option(arpScanner)
+```
+
+- Perform reverse dns lookup to find hostnames for found devices
+
+```go
+  arpScanner := scanner.NewArpScanner(
+    targets,
+    netInfo,
+    arpResults,
+    arpDone,
+    scanner.WithHostnames(true)
+  )
+
+  // or
+  arpScanner.IncludeHostnames(true)
+
+  // or
+  option := scanner.WithHostnames(true)
   option(arpScanner)
 ```
 
