@@ -41,6 +41,13 @@ func WithVendorInfo(repo oui.VendorRepo) Option {
 	}
 }
 
+// WithHostnames sets whether or not to perform reverse dns lookup
+func WithHostnames(v bool) Option {
+	return func(s Scanner) {
+		s.IncludeHostNames(v)
+	}
+}
+
 // WithPacketCapture sets the packet capture implementation for the scanner
 func WithPacketCapture(cap PacketCapture) Option {
 	return func(s Scanner) {

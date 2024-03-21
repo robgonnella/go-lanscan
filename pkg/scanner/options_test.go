@@ -35,6 +35,7 @@ func TestOptions(t *testing.T) {
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(requestNotifier),
 			scanner.WithVendorInfo(vendorRepo),
+			scanner.WithHostnames(true),
 		)
 
 		scanner.NewFullScanner(
@@ -47,6 +48,7 @@ func TestOptions(t *testing.T) {
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(requestNotifier),
 			scanner.WithVendorInfo(vendorRepo),
+			scanner.WithHostnames(true),
 		)
 
 		scanner.NewSynScanner(
@@ -59,6 +61,7 @@ func TestOptions(t *testing.T) {
 			scanner.WithPacketCapture(testPacketCapture),
 			scanner.WithRequestNotifications(requestNotifier),
 			scanner.WithVendorInfo(vendorRepo),
+			scanner.WithHostnames(true),
 		)
 	})
 }

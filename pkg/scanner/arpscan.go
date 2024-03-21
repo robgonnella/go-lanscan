@@ -32,6 +32,7 @@ type ArpScanner struct {
 	timing           time.Duration
 	idleTimeout      time.Duration
 	vendorRepo       oui.VendorRepo
+	hostNamesEnables bool
 	scanningMux      *sync.RWMutex
 	packetSentAtMux  *sync.RWMutex
 	debug            logger.DebugLogger
@@ -44,6 +45,7 @@ func NewArpScanner(
 	options ...Option,
 ) *ArpScanner {
 	scanner := &ArpScanner{
+		cancel:           make(chan struct{}),
 		targets:          targets,
 		cap:              &defaultPacketCapture{},
 		networkInfo:      networkInfo,
@@ -106,7 +108,6 @@ func (s *ArpScanner) Scan() error {
 
 	s.scanningMux.Unlock()
 	s.handle = handle
-	s.cancel = make(chan struct{})
 
 	go s.readPackets()
 
@@ -138,9 +139,9 @@ func (s *ArpScanner) Scan() error {
 
 // Stop stops the scanner
 func (s *ArpScanner) Stop() {
-	if s.cancel != nil {
-		close(s.cancel)
-	}
+	go func() {
+		s.cancel <- struct{}{}
+	}()
 
 	if s.handle != nil {
 		s.handle.Close()
@@ -162,6 +163,11 @@ func (s *ArpScanner) SetRequestNotifications(c chan *Request) {
 // SetIdleTimeout sets the idle timeout for this scanner
 func (s *ArpScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
+}
+
+// IncludeHostNames sets whether reverse dns look up is performed to find hostname
+func (s *ArpScanner) IncludeHostNames(v bool) {
+	s.hostNamesEnables = v
 }
 
 // IncludeVendorInfo sets whether or not to include vendor info in the scan
@@ -316,9 +322,10 @@ func (s *ArpScanner) writePacketData(ip net.IP) error {
 
 func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 	arpResult := &ArpScanResult{
-		IP:     ip,
-		MAC:    mac,
-		Vendor: "unknown",
+		IP:       ip,
+		MAC:      mac,
+		Hostname: "unknown",
+		Vendor:   "unknown",
 	}
 
 	if s.vendorRepo != nil {
@@ -326,6 +333,13 @@ func (s *ArpScanner) processResult(ip net.IP, mac net.HardwareAddr) {
 
 		if err == nil {
 			arpResult.Vendor = vendor.Name
+		}
+	}
+
+	if s.hostNamesEnables {
+		addr, err := net.LookupAddr(ip.String())
+		if err == nil && len(addr) > 0 {
+			arpResult.Hostname = addr[0]
 		}
 	}
 

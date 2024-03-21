@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=../../../mock/scripts/bump-version/version/version.go -package=mock_version . VersionControl,VersionGenerator
 //
+
 // Package mock_version is a generated GoMock package.
 package mock_version
 

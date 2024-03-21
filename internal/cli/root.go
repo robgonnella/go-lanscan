@@ -27,6 +27,7 @@ func printConfiguration(
 	listenPort uint16,
 	timing string,
 	vendorInfo,
+	hostNames,
 	printJSON,
 	arpOnly,
 	progress bool,
@@ -77,6 +78,11 @@ func printConfiguration(
 	})
 
 	configTable.AppendRow(table.Row{
+		"hostNames",
+		hostNames,
+	})
+
+	configTable.AppendRow(table.Row{
 		"json",
 		printJSON,
 	})
@@ -114,6 +120,7 @@ func Root(
 	var ifaceName string
 	var targets []string
 	var vendorInfo bool
+	var hostNames bool
 	var arpOnly bool
 	var outFile string
 
@@ -160,6 +167,10 @@ func Root(
 				coreScanner.IncludeVendorInfo(vendorRepo)
 			}
 
+			if hostNames {
+				coreScanner.IncludeHostNames(true)
+			}
+
 			timingDuration, err := time.ParseDuration(timing)
 
 			if err != nil {
@@ -197,6 +208,7 @@ func Root(
 					listenPort,
 					timing,
 					vendorInfo,
+					hostNames,
 					printJSON,
 					arpOnly,
 					!progressDisabled,
@@ -219,6 +231,7 @@ func Root(
 	cmd.Flags().StringSliceVarP(&targets, "targets", "t", []string{userNet.Cidr()}, "set targets for scanning")
 	cmd.Flags().StringVar(&outFile, "out-file", "", "outputs final report to file")
 	cmd.Flags().BoolVar(&vendorInfo, "vendor", false, "include vendor info (takes a little longer)")
+	cmd.Flags().BoolVar(&hostNames, "hostnames", false, "perform reverse dns lookup for hostnames")
 
 	cmd.AddCommand(newVersion())
 	cmd.AddCommand(newUpdateVendors(vendorRepo))

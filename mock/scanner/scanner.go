@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=../../mock/scanner/scanner.go -package=mock_scanner . Scanner,PacketCaptureHandle,PacketCapture
 //
+
 // Package mock_scanner is a generated GoMock package.
 package mock_scanner
 
@@ -39,6 +40,18 @@ func NewMockScanner(ctrl *gomock.Controller) *MockScanner {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockScanner) EXPECT() *MockScannerMockRecorder {
 	return m.recorder
+}
+
+// IncludeHostNames mocks base method.
+func (m *MockScanner) IncludeHostNames(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "IncludeHostNames", arg0)
+}
+
+// IncludeHostNames indicates an expected call of IncludeHostNames.
+func (mr *MockScannerMockRecorder) IncludeHostNames(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncludeHostNames", reflect.TypeOf((*MockScanner)(nil).IncludeHostNames), arg0)
 }
 
 // IncludeVendorInfo mocks base method.

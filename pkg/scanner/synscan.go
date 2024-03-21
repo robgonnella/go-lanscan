@@ -54,6 +54,7 @@ func NewSynScanner(
 	options ...Option,
 ) *SynScanner {
 	scanner := &SynScanner{
+		cancel:           make(chan struct{}),
 		targets:          targets,
 		networkInfo:      networkInfo,
 		cap:              &defaultPacketCapture{},
@@ -134,7 +135,6 @@ func (s *SynScanner) Scan() error {
 	s.scanningMux.Unlock()
 
 	s.handle = handle
-	s.cancel = make(chan struct{})
 
 	go s.readPackets()
 
@@ -167,9 +167,9 @@ func (s *SynScanner) Scan() error {
 
 // Stop stops the scanner
 func (s *SynScanner) Stop() {
-	if s.cancel != nil {
-		close(s.cancel)
-	}
+	go func() {
+		s.cancel <- struct{}{}
+	}()
 
 	if s.handle != nil {
 		s.handle.Close()
@@ -191,6 +191,11 @@ func (s *SynScanner) SetRequestNotifications(c chan *Request) {
 // SetIdleTimeout sets the idle timeout for this scanner
 func (s *SynScanner) SetIdleTimeout(duration time.Duration) {
 	s.idleTimeout = duration
+}
+
+// IncludeHostNames sets whether reverse dns look up is performed to find hostname
+func (s *SynScanner) IncludeHostNames(v bool) {
+	// nothing to do
 }
 
 // IncludeVendorInfo N/A for SYN scanner but here to satisfy Scanner interface

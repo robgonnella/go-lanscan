@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=../mock/core/core.go -package=mock_core . Runner
 //
+
 // Package mock_core is a generated GoMock package.
 package mock_core
 
