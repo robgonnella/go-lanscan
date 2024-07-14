@@ -28,13 +28,11 @@ type ArpScanner struct {
 	resultChan       chan *ScanResult
 	requestNotifier  chan *Request
 	scanning         bool
-	lastPacketSentAt time.Time
 	timing           time.Duration
 	idleTimeout      time.Duration
 	vendorRepo       oui.VendorRepo
 	hostNamesEnables bool
 	scanningMux      *sync.RWMutex
-	packetSentAtMux  *sync.RWMutex
 	debug            logger.DebugLogger
 }
 
@@ -45,18 +43,16 @@ func NewArpScanner(
 	options ...Option,
 ) *ArpScanner {
 	scanner := &ArpScanner{
-		cancel:           make(chan struct{}),
-		targets:          targets,
-		cap:              &defaultPacketCapture{},
-		networkInfo:      networkInfo,
-		resultChan:       make(chan *ScanResult),
-		timing:           defaultTiming,
-		idleTimeout:      defaultIdleTimeout,
-		scanning:         false,
-		lastPacketSentAt: time.Time{},
-		scanningMux:      &sync.RWMutex{},
-		packetSentAtMux:  &sync.RWMutex{},
-		debug:            logger.NewDebugLogger(),
+		cancel:      make(chan struct{}),
+		targets:     targets,
+		cap:         &defaultPacketCapture{},
+		networkInfo: networkInfo,
+		resultChan:  make(chan *ScanResult),
+		timing:      defaultTiming,
+		idleTimeout: defaultIdleTimeout,
+		scanning:    false,
+		scanningMux: &sync.RWMutex{},
+		debug:       logger.NewDebugLogger(),
 	}
 
 	for _, o := range options {
@@ -110,9 +106,6 @@ func (s *ArpScanner) Scan() error {
 	s.scanningMux.Unlock()
 	s.handle = handle
 
-	timeout := make(chan struct{})
-
-	go s.startPacketReceiveTimeout(timeout)
 	go s.readPackets()
 
 	limiter := time.NewTicker(s.timing)
@@ -134,11 +127,7 @@ func (s *ArpScanner) Scan() error {
 		})
 	}
 
-	s.packetSentAtMux.Lock()
-	s.lastPacketSentAt = time.Now()
-	s.packetSentAtMux.Unlock()
-
-	<-timeout
+	time.Sleep(s.idleTimeout)
 
 	go s.Stop()
 
@@ -195,31 +184,6 @@ func (s *ArpScanner) IncludeVendorInfo(repo oui.VendorRepo) {
 // SetPacketCapture sets the data structure used for capture packets
 func (s *ArpScanner) SetPacketCapture(cap PacketCapture) {
 	s.cap = cap
-}
-
-func (s *ArpScanner) startPacketReceiveTimeout(timeout chan<- struct{}) {
-	for {
-		select {
-		case <-s.cancel:
-			go func() {
-				timeout <- struct{}{}
-			}()
-			return
-		default:
-			s.packetSentAtMux.RLock()
-			packetSentAt := s.lastPacketSentAt
-			s.packetSentAtMux.RUnlock()
-
-			if !packetSentAt.IsZero() && time.Since(packetSentAt) >= s.idleTimeout {
-				go func() {
-					timeout <- struct{}{}
-				}()
-				return
-			}
-
-			time.Sleep(time.Millisecond * 100)
-		}
-	}
 }
 
 func (s *ArpScanner) readPackets() {
@@ -367,8 +331,4 @@ func (s *ArpScanner) reset() {
 	s.scanningMux.Lock()
 	s.scanning = false
 	s.scanningMux.Unlock()
-
-	s.packetSentAtMux.Lock()
-	s.lastPacketSentAt = time.Time{}
-	s.packetSentAtMux.Unlock()
 }
