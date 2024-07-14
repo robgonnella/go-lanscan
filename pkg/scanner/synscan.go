@@ -26,23 +26,21 @@ type SynPacket struct {
 
 // SynScanner implements the Scanner interface for SYN scanning
 type SynScanner struct {
-	cancel           chan struct{}
-	networkInfo      network.Network
-	targets          []*ArpScanResult
-	ports            []string
-	listenPort       uint16
-	cap              PacketCapture
-	handle           PacketCaptureHandle
-	resultChan       chan *ScanResult
-	requestNotifier  chan *Request
-	scanning         bool
-	lastPacketSentAt time.Time
-	timing           time.Duration
-	idleTimeout      time.Duration
-	scanningMux      *sync.RWMutex
-	packetSentAtMux  *sync.RWMutex
-	serviceQueryMux  *sync.Mutex
-	debug            logger.DebugLogger
+	cancel          chan struct{}
+	networkInfo     network.Network
+	targets         []*ArpScanResult
+	ports           []string
+	listenPort      uint16
+	cap             PacketCapture
+	handle          PacketCaptureHandle
+	resultChan      chan *ScanResult
+	requestNotifier chan *Request
+	scanning        bool
+	timing          time.Duration
+	idleTimeout     time.Duration
+	scanningMux     *sync.RWMutex
+	serviceQueryMux *sync.Mutex
+	debug           logger.DebugLogger
 }
 
 // NewSynScanner returns a new instance of SYNScanner
@@ -54,21 +52,19 @@ func NewSynScanner(
 	options ...Option,
 ) *SynScanner {
 	scanner := &SynScanner{
-		cancel:           make(chan struct{}),
-		targets:          targets,
-		networkInfo:      networkInfo,
-		cap:              &defaultPacketCapture{},
-		ports:            ports,
-		listenPort:       listenPort,
-		resultChan:       make(chan *ScanResult),
-		timing:           defaultTiming,
-		idleTimeout:      defaultIdleTimeout,
-		scanning:         false,
-		lastPacketSentAt: time.Time{},
-		scanningMux:      &sync.RWMutex{},
-		packetSentAtMux:  &sync.RWMutex{},
-		serviceQueryMux:  &sync.Mutex{},
-		debug:            logger.NewDebugLogger(),
+		cancel:          make(chan struct{}),
+		targets:         targets,
+		networkInfo:     networkInfo,
+		cap:             &defaultPacketCapture{},
+		ports:           ports,
+		listenPort:      listenPort,
+		resultChan:      make(chan *ScanResult),
+		timing:          defaultTiming,
+		idleTimeout:     defaultIdleTimeout,
+		scanning:        false,
+		scanningMux:     &sync.RWMutex{},
+		serviceQueryMux: &sync.Mutex{},
+		debug:           logger.NewDebugLogger(),
 	}
 
 	for _, o := range options {
@@ -138,9 +134,6 @@ func (s *SynScanner) Scan() error {
 
 	s.handle = handle
 
-	timeout := make(chan struct{})
-
-	go s.startPacketReceiveTimeout(timeout)
 	go s.readPackets()
 
 	limiter := time.NewTicker(s.timing)
@@ -163,11 +156,7 @@ func (s *SynScanner) Scan() error {
 		}
 	}
 
-	s.packetSentAtMux.Lock()
-	s.lastPacketSentAt = time.Now()
-	s.packetSentAtMux.Unlock()
-
-	<-timeout
+	time.Sleep(s.idleTimeout)
 
 	go s.Stop()
 
@@ -226,31 +215,6 @@ func (s *SynScanner) SetPacketCapture(cap PacketCapture) {
 // SetTargets sets the targets for SYN scanning
 func (s *SynScanner) SetTargets(targets []*ArpScanResult) {
 	s.targets = targets
-}
-
-func (s *SynScanner) startPacketReceiveTimeout(timeout chan<- struct{}) {
-	for {
-		select {
-		case <-s.cancel:
-			go func() {
-				timeout <- struct{}{}
-			}()
-			return
-		default:
-			s.packetSentAtMux.RLock()
-			packetSentAt := s.lastPacketSentAt
-			s.packetSentAtMux.RUnlock()
-
-			if !packetSentAt.IsZero() && time.Since(packetSentAt) >= s.idleTimeout {
-				go func() {
-					timeout <- struct{}{}
-				}()
-				return
-			}
-
-			time.Sleep(time.Millisecond * 100)
-		}
-	}
 }
 
 func (s *SynScanner) readPackets() {
@@ -418,8 +382,4 @@ func (s *SynScanner) reset() {
 	s.scanningMux.Lock()
 	s.scanning = false
 	s.scanningMux.Unlock()
-
-	s.packetSentAtMux.Lock()
-	s.lastPacketSentAt = time.Time{}
-	s.packetSentAtMux.Unlock()
 }
