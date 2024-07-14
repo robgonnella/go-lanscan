@@ -74,6 +74,8 @@ func (s *ArpScanner) Results() chan *ScanResult {
 
 // Scan implements the Scan method for ARP scanning
 func (s *ArpScanner) Scan() error {
+	defer s.reset()
+
 	fields := map[string]interface{}{
 		"interface": s.networkInfo.Interface().Name,
 		"cidr":      s.networkInfo.Cidr(),
@@ -92,7 +94,6 @@ func (s *ArpScanner) Scan() error {
 	s.scanningMux.Lock()
 	s.scanning = true
 
-	// open a new handle each time so we don't hit buffer overflow error
 	handle, err := s.cap.OpenLive(
 		s.networkInfo.Interface().Name,
 		65536,
@@ -109,6 +110,9 @@ func (s *ArpScanner) Scan() error {
 	s.scanningMux.Unlock()
 	s.handle = handle
 
+	timeout := make(chan struct{})
+
+	go s.startPacketReceiveTimeout(timeout)
 	go s.readPackets()
 
 	limiter := time.NewTicker(s.timing)
@@ -131,8 +135,18 @@ func (s *ArpScanner) Scan() error {
 	}
 
 	s.packetSentAtMux.Lock()
-	defer s.packetSentAtMux.Unlock()
 	s.lastPacketSentAt = time.Now()
+	s.packetSentAtMux.Unlock()
+
+	<-timeout
+
+	go s.Stop()
+
+	go func() {
+		s.resultChan <- &ScanResult{
+			Type: ARPDone,
+		}
+	}()
 
 	return err
 }
@@ -183,55 +197,13 @@ func (s *ArpScanner) SetPacketCapture(cap PacketCapture) {
 	s.cap = cap
 }
 
-func (s *ArpScanner) readPackets() {
-	done := make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			default:
-				var eth layers.Ethernet
-				var arp layers.ARP
-				var payload gopacket.Payload
-
-				parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp, &payload)
-				decoded := []gopacket.LayerType{}
-				packetData, _, err := s.handle.ReadPacketData()
-
-				if err != nil {
-					s.debug.Error().Err(err).Msg("arp: error reading packet")
-					continue
-				}
-
-				err = parser.DecodeLayers(packetData, &decoded)
-
-				if err != nil {
-					s.debug.Error().Err(err).Msg("arp: error decoding packet")
-					continue
-				}
-
-			OUTER:
-				for _, layerType := range decoded {
-					switch layerType {
-					case layers.LayerTypeARP:
-						go s.handleARPLayer(&arp)
-						break OUTER
-					}
-				}
-			}
-		}
-	}()
-
-	defer func() {
-		go close(done)
-		s.reset()
-	}()
-
+func (s *ArpScanner) startPacketReceiveTimeout(timeout chan<- struct{}) {
 	for {
 		select {
 		case <-s.cancel:
+			go func() {
+				timeout <- struct{}{}
+			}()
 			return
 		default:
 			s.packetSentAtMux.RLock()
@@ -239,10 +211,50 @@ func (s *ArpScanner) readPackets() {
 			s.packetSentAtMux.RUnlock()
 
 			if !packetSentAt.IsZero() && time.Since(packetSentAt) >= s.idleTimeout {
-				s.resultChan <- &ScanResult{
-					Type: ARPDone,
-				}
+				go func() {
+					timeout <- struct{}{}
+				}()
 				return
+			}
+
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+}
+
+func (s *ArpScanner) readPackets() {
+	for {
+		select {
+		case <-s.cancel:
+			return
+		default:
+			var eth layers.Ethernet
+			var arp layers.ARP
+			var payload gopacket.Payload
+
+			parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp, &payload)
+			decoded := []gopacket.LayerType{}
+			packetData, _, err := s.handle.ReadPacketData()
+
+			if err != nil {
+				s.debug.Error().Err(err).Msg("arp: error reading packet")
+				continue
+			}
+
+			err = parser.DecodeLayers(packetData, &decoded)
+
+			if err != nil {
+				s.debug.Error().Err(err).Msg("arp: error decoding packet")
+				continue
+			}
+
+		INNER:
+			for _, layerType := range decoded {
+				switch layerType {
+				case layers.LayerTypeARP:
+					go s.handleARPLayer(&arp)
+					break INNER
+				}
 			}
 		}
 	}

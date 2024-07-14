@@ -4,7 +4,6 @@ package scanner
 
 import (
 	"bytes"
-	"fmt"
 	"slices"
 	"sync"
 	"time"
@@ -116,18 +115,11 @@ func (s *FullScanner) Scan() error {
 				go s.handleArpDone()
 			}
 		case r := <-s.synScanner.Results():
-			switch r.Type {
-			case SYNResult:
-				go func() {
-					s.results <- r
-				}()
-			case SYNDone:
-				go func() {
-					s.results <- r
-				}()
+			go func() {
+				s.results <- r
+			}()
+			if r.Type == SYNDone {
 				return nil
-			default:
-				return fmt.Errorf("unknown result type: %s", r.Type)
 			}
 		case err := <-s.errorChan:
 			return err

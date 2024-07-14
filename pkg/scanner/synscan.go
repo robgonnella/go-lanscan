@@ -86,6 +86,8 @@ func (s *SynScanner) Results() chan *ScanResult {
 
 // Scan implements SYN scanning
 func (s *SynScanner) Scan() error {
+	defer s.reset()
+
 	fields := map[string]interface{}{
 		"interface": s.networkInfo.Interface().Name,
 		"cidr":      s.networkInfo.Cidr(),
@@ -136,6 +138,9 @@ func (s *SynScanner) Scan() error {
 
 	s.handle = handle
 
+	timeout := make(chan struct{})
+
+	go s.startPacketReceiveTimeout(timeout)
 	go s.readPackets()
 
 	limiter := time.NewTicker(s.timing)
@@ -159,8 +164,18 @@ func (s *SynScanner) Scan() error {
 	}
 
 	s.packetSentAtMux.Lock()
-	defer s.packetSentAtMux.Unlock()
 	s.lastPacketSentAt = time.Now()
+	s.packetSentAtMux.Unlock()
+
+	<-timeout
+
+	go s.Stop()
+
+	go func() {
+		s.resultChan <- &ScanResult{
+			Type: SYNDone,
+		}
+	}()
 
 	return nil
 }
@@ -213,62 +228,13 @@ func (s *SynScanner) SetTargets(targets []*ArpScanResult) {
 	s.targets = targets
 }
 
-func (s *SynScanner) readPackets() {
-	done := make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			default:
-				var eth layers.Ethernet
-				var ip4 layers.IPv4
-				var tcp layers.TCP
-				var payload gopacket.Payload
-
-				parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &tcp, &payload)
-				decoded := []gopacket.LayerType{}
-				packetData, _, err := s.handle.ReadPacketData()
-
-				if err != nil {
-					s.debug.Error().Err(err).Msg("syn: read packet error")
-					continue
-				}
-
-				err = parser.DecodeLayers(packetData, &decoded)
-
-				if err != nil {
-					s.debug.Error().Err(err).Msg("syn: decode packet error")
-					continue
-				}
-
-				synPacket := &SynPacket{}
-
-				for _, layerType := range decoded {
-					switch layerType {
-					case layers.LayerTypeIPv4:
-						synPacket.IP4 = &ip4
-					case layers.LayerTypeTCP:
-						synPacket.TCP = &tcp
-					}
-				}
-
-				if synPacket.IP4 != nil && synPacket.TCP != nil {
-					go s.handlePacket(synPacket)
-				}
-			}
-		}
-	}()
-
-	defer func() {
-		go close(done)
-		s.reset()
-	}()
-
+func (s *SynScanner) startPacketReceiveTimeout(timeout chan<- struct{}) {
 	for {
 		select {
 		case <-s.cancel:
+			go func() {
+				timeout <- struct{}{}
+			}()
 			return
 		default:
 			s.packetSentAtMux.RLock()
@@ -276,10 +242,57 @@ func (s *SynScanner) readPackets() {
 			s.packetSentAtMux.RUnlock()
 
 			if !packetSentAt.IsZero() && time.Since(packetSentAt) >= s.idleTimeout {
-				s.resultChan <- &ScanResult{
-					Type: SYNDone,
-				}
+				go func() {
+					timeout <- struct{}{}
+				}()
 				return
+			}
+
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+}
+
+func (s *SynScanner) readPackets() {
+	for {
+		select {
+		case <-s.cancel:
+			return
+		default:
+			var eth layers.Ethernet
+			var ip4 layers.IPv4
+			var tcp layers.TCP
+			var payload gopacket.Payload
+
+			parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &tcp, &payload)
+			decoded := []gopacket.LayerType{}
+			packetData, _, err := s.handle.ReadPacketData()
+
+			if err != nil {
+				s.debug.Error().Err(err).Msg("syn: read packet error")
+				continue
+			}
+
+			err = parser.DecodeLayers(packetData, &decoded)
+
+			if err != nil {
+				s.debug.Error().Err(err).Msg("syn: decode packet error")
+				continue
+			}
+
+			synPacket := &SynPacket{}
+
+			for _, layerType := range decoded {
+				switch layerType {
+				case layers.LayerTypeIPv4:
+					synPacket.IP4 = &ip4
+				case layers.LayerTypeTCP:
+					synPacket.TCP = &tcp
+				}
+			}
+
+			if synPacket.IP4 != nil && synPacket.TCP != nil {
+				go s.handlePacket(synPacket)
 			}
 		}
 	}
