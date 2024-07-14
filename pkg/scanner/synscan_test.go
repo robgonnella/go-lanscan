@@ -339,7 +339,7 @@ func TestSynScanner(t *testing.T) {
 		assert.ErrorIs(st, mockErr, err)
 	})
 
-	t.Run("performs syn scan ", func(st *testing.T) {
+	t.Run("performs syn scan", func(st *testing.T) {
 		capture := mock_scanner.NewMockPacketCapture(ctrl)
 		handle := mock_scanner.NewMockPacketCaptureHandle(ctrl)
 		netInfo := mock_network.NewMockNetwork(ctrl)
