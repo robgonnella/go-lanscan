@@ -156,15 +156,15 @@ func (s *SynScanner) Scan() error {
 		}
 	}
 
-	time.Sleep(s.idleTimeout)
+	time.AfterFunc(s.idleTimeout, func() {
+		go s.Stop()
 
-	go s.Stop()
-
-	go func() {
-		s.resultChan <- &ScanResult{
-			Type: SYNDone,
-		}
-	}()
+		go func() {
+			s.resultChan <- &ScanResult{
+				Type: SYNDone,
+			}
+		}()
+	})
 
 	return nil
 }

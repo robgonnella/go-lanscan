@@ -127,15 +127,15 @@ func (s *ArpScanner) Scan() error {
 		})
 	}
 
-	time.Sleep(s.idleTimeout)
+	time.AfterFunc(s.idleTimeout, func() {
+		go s.Stop()
 
-	go s.Stop()
-
-	go func() {
-		s.resultChan <- &ScanResult{
-			Type: ARPDone,
-		}
-	}()
+		go func() {
+			s.resultChan <- &ScanResult{
+				Type: ARPDone,
+			}
+		}()
+	})
 
 	return err
 }
